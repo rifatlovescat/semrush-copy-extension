@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.2] - 2026-10-26
+
+### Added
+- **Direct CSV File Download**:
+  - Clicking the **CSV** button in the on-page floating widget or the extension popup now immediately downloads a `.csv` file directly to your downloads folder (`<query>_kgr_keywords.csv`).
+  - Added UTF-8 Byte Order Mark (`\uFEFF`) so downloaded CSV files open cleanly in Excel, Google Sheets, and LibreOffice without character garbling.
+  - Included toast status feedback: `?? Downloaded 10 keywords as CSV!`.
+
+---
+
 ## [1.2.1] - 2026-10-26
 
 ### Fixed

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Semrush Quick Copy",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Instant 1-click copy & export for Semrush Keyword Magic Tool into Google Sheets with KGR (Keyword Golden Ratio) auto-calculation.",
   "icons": {
     "16": "icons/icon16.png",

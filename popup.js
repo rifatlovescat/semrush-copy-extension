@@ -473,9 +473,27 @@ document.addEventListener('DOMContentLoaded', () => {
     runAutoCheckKgr();
   });
 
+  function downloadCsvFile(data) {
+    const csvContent = getCSVData();
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const querySlug = (currentQuery || 'semrush_keywords').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${querySlug}_kgr_keywords.csv`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 1000);
+    showToast(`?? Downloaded ${data.length} keywords as CSV!`);
+  }
+
   btnCopyCsv.addEventListener('click', () => {
-    if (!currentKeywords.length) return showToast('No keywords to copy!');
-    copyPlainText(getCSVData(), `?? Copied ${currentKeywords.length} as CSV!`);
+    if (!currentKeywords.length) return showToast('No keywords to download!');
+    downloadCsvFile(currentKeywords);
   });
 
   btnCopyList.addEventListener('click', () => {
@@ -484,16 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnExportFile.addEventListener('click', () => {
-    if (!currentKeywords.length) return showToast('No keywords to export!');
-    const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(getCSVData());
-    const querySlug = (currentQuery || 'semrush_keywords').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const link = document.createElement('a');
-    link.setAttribute('href', csvContent);
-    link.setAttribute('download', `${querySlug}_kgr_keywords.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast(`?? Downloaded ${currentKeywords.length} keywords!`);
+    if (!currentKeywords.length) return showToast('No keywords to download!');
+    downloadCsvFile(currentKeywords);
   });
 
   btnRefresh.addEventListener('click', () => {

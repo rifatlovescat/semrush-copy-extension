@@ -293,6 +293,29 @@
   }
 
   /**
+   * Direct CSV File Downloader
+   */
+  function downloadCsvFile(data) {
+    const csvContent = formatAsCSV(data);
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const query = currentQuery || getSearchQuery() || 'semrush_keywords';
+    const cleanSlug = query.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_');
+    const filename = `${cleanSlug}_kgr_keywords.csv`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }
+
+  /**
    * Dual Clipboard Writer (text/html + text/plain)
    */
   async function copyRichTable(data) {
@@ -726,7 +749,7 @@
           </button>
 
           <div class="btn-row">
-            <button type="button" class="btn-sub" id="btn-csv" title="Copy standard CSV">CSV</button>
+            <button type="button" class="btn-sub" id="btn-csv" title="Download CSV file directly">Download CSV</button>
             <button type="button" class="btn-sub" id="btn-list" title="Copy plain keyword list">List Only</button>
           </div>
         </div>
@@ -764,9 +787,14 @@
         showToast('No keywords detected yet', true);
         return;
       }
-      copyPlainText(formatAsCSV(cachedKeywords)).then(() => {
-        showToast(`?? Copied ${cachedKeywords.length} as CSV!`);
-      }).catch(() => showToast('Copy failed', true));
+      try {
+        downloadCsvFile(cachedKeywords);
+        showToast(`?? Downloaded ${cachedKeywords.length} as CSV!`);
+      } catch (err) {
+        copyPlainText(formatAsCSV(cachedKeywords)).then(() => {
+          showToast(`?? Copied ${cachedKeywords.length} as CSV!`);
+        }).catch(() => showToast('Download failed', true));
+      }
     });
 
     btnList?.addEventListener('click', () => {

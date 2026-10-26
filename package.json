@@ -1,6 +1,6 @@
 {
   "name": "semrush-quick-copy",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Chrome Extension for instant 1-click keyword and metric extraction from Semrush Keyword Magic Tool into Google Sheets with KGR auto-calculation.",
   "main": "content.js",
   "author": "r1fat (https://r1fat.pages.dev)",
