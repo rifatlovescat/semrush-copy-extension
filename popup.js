@@ -1,5 +1,5 @@
 /**
- * Semrush Quick Copy - Popup Script (V2)
+ * Semrush Quick Copy - Popup Script (V3 - Styled Sheets Clipboard)
  * Author: r1fat (https://r1fat.pages.dev)
  */
 
@@ -29,21 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     toastTimer = setTimeout(() => {
       popupToastEl.classList.remove('show');
     }, 2200);
-  }
-
-  // Copy to clipboard helper
-  function copyToClipboard(text, successMsg) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast(successMsg);
-    }).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      showToast(successMsg);
-    });
   }
 
   // Render Keywords Preview
@@ -94,6 +79,64 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/"/g, '&quot;');
   }
 
+  // Color mappings for Google Sheets
+  function getKdColors(kdStr) {
+    const kd = parseInt(kdStr, 10) || 0;
+    if (kd < 30) return { bg: '#E6F4EA', text: '#137333' }; // Very Easy
+    if (kd < 50) return { bg: '#FEF7E0', text: '#B06000' }; // Possible
+    if (kd < 70) return { bg: '#FEEDDC', text: '#C05621' }; // Difficult
+    if (kd < 85) return { bg: '#FCE8E6', text: '#C5221F' }; // Hard
+    return { bg: '#F8D7DA', text: '#721C24' };              // Very Hard
+  }
+
+  function getIntentColors(intentStr) {
+    const i = (intentStr || '').toLowerCase();
+    if (i.includes('comm')) return { bg: '#FEF7E0', text: '#B06000' };
+    if (i.includes('trans')) return { bg: '#FCE8E6', text: '#C5221F' };
+    if (i.includes('nav')) return { bg: '#F3E8FD', text: '#7627BB' };
+    return { bg: '#E8F0FE', text: '#1967D2' };
+  }
+
+  // Format as Styled HTML table for Google Sheets / Excel
+  function formatAsStyledHTML(data) {
+    const rowsHtml = data.map((r, idx) => {
+      const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F9F7FC';
+      const kdCol = getKdColors(r.kd);
+      const intCol = getIntentColors(r.intent);
+
+      return `
+        <tr style="background-color: ${rowBg};">
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; font-weight: 600; color: #111827; text-align: left;">${r.keyword}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; background-color: ${intCol.bg}; color: ${intCol.text}; font-weight: bold;">${r.intent}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; font-weight: bold; color: #1F2937;">${r.volume}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; background-color: ${kdCol.bg}; color: ${kdCol.text}; font-weight: bold;">${r.kd}%</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; color: #374151;">$${r.cpc}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; color: #4B5563;">${r.compLvl}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; color: #6B7280; font-size: 11px;">${r.updated}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <table style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; color: #333333; border: 1px solid #D2D6DC;">
+        <thead>
+          <tr style="background-color: #2B0F52; color: #FFFFFF; font-weight: bold;">
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: left; background-color: #2B0F52; color: #FFFFFF;">Keyword</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">Intent</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Volume</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">KD %</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">CPC</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">Comp. Density</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Freshness</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  }
+
   // Format Helpers
   function getTSVData() {
     const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated'].join('\t');
@@ -116,6 +159,53 @@ document.addEventListener('DOMContentLoaded', () => {
     return currentKeywords.map(r => r.keyword).join('\n');
   }
 
+  // Dual Clipboard Writer (text/html + text/plain)
+  async function copyRichTable(data) {
+    const htmlContent = formatAsStyledHTML(data);
+    const plainText = getTSVData();
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob
+          })
+        ]);
+        showToast(`✨ Copied ${data.length} styled rows for Sheets!`);
+        return;
+      }
+    } catch (e) {
+      console.warn('ClipboardItem error, falling back:', e);
+    }
+
+    // Fallback via copy event listener
+    const listener = (evt) => {
+      evt.preventDefault();
+      evt.clipboardData.setData('text/html', htmlContent);
+      evt.clipboardData.setData('text/plain', plainText);
+    };
+    document.addEventListener('copy', listener, { once: true });
+    document.execCommand('copy');
+    showToast(`✨ Copied ${data.length} styled rows for Sheets!`);
+  }
+
+  function copyPlainText(text, msg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => showToast(msg));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast(msg);
+    }
+  }
+
   // Request Data from Active Tab
   function fetchActiveTabData() {
     keywordsListEl.innerHTML = `
@@ -132,12 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Check if not on semrush.com
       if (!activeTab.url || !activeTab.url.includes('semrush.com')) {
         keywordsListEl.innerHTML = `
           <div class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width: 32px; height: 32px; color: var(--accent-lavender);">
-              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="10"></line>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
@@ -154,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!chrome.runtime.lastError && response && response.keywords && response.keywords.length > 0) {
           renderKeywords(response.keywords, response.query);
         } else {
-          // Fallback direct execution script with identical robust logic
           chrome.scripting.executeScript({
             target: { tabId: activeTab.id },
             func: () => {
@@ -242,17 +330,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Button Handlers
   btnCopyTsv.addEventListener('click', () => {
     if (!currentKeywords.length) return showToast('No keywords to copy!');
-    copyToClipboard(getTSVData(), `✨ Copied ${currentKeywords.length} keywords for Sheets!`);
+    copyRichTable(currentKeywords);
   });
 
   btnCopyCsv.addEventListener('click', () => {
     if (!currentKeywords.length) return showToast('No keywords to copy!');
-    copyToClipboard(getCSVData(), `📄 Copied ${currentKeywords.length} as CSV!`);
+    copyPlainText(getCSVData(), `📄 Copied ${currentKeywords.length} as CSV!`);
   });
 
   btnCopyList.addEventListener('click', () => {
     if (!currentKeywords.length) return showToast('No keywords to copy!');
-    copyToClipboard(getKeywordsOnly(), `🔤 Copied ${currentKeywords.length} plain keywords!`);
+    copyPlainText(getKeywordsOnly(), `🔤 Copied ${currentKeywords.length} plain keywords!`);
   });
 
   btnExportFile.addEventListener('click', () => {

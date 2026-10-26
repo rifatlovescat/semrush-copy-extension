@@ -1,5 +1,5 @@
 /**
- * Semrush Quick Copy - Content Script (V2)
+ * Semrush Quick Copy - Content Script (V3 - Rich Styled Clipboard for Google Sheets)
  * Author: r1fat (https://r1fat.pages.dev)
  */
 
@@ -125,7 +125,70 @@
   }
 
   /**
-   * Clipboard Formatters
+   * Color Helpers for Google Sheets Styling
+   */
+  function getKdColors(kdStr) {
+    const kd = parseInt(kdStr, 10) || 0;
+    if (kd < 30) return { bg: '#E6F4EA', text: '#137333' }; // Very Easy - Soft Green
+    if (kd < 50) return { bg: '#FEF7E0', text: '#B06000' }; // Possible - Soft Yellow
+    if (kd < 70) return { bg: '#FEEDDC', text: '#C05621' }; // Difficult - Soft Orange
+    if (kd < 85) return { bg: '#FCE8E6', text: '#C5221F' }; // Hard - Soft Red
+    return { bg: '#F8D7DA', text: '#721C24' };              // Very Hard - Deep Red
+  }
+
+  function getIntentColors(intentStr) {
+    const i = (intentStr || '').toLowerCase();
+    if (i.includes('comm')) return { bg: '#FEF7E0', text: '#B06000' }; // Commercial
+    if (i.includes('trans')) return { bg: '#FCE8E6', text: '#C5221F' }; // Transactional
+    if (i.includes('nav')) return { bg: '#F3E8FD', text: '#7627BB' };   // Navigational
+    return { bg: '#E8F0FE', text: '#1967D2' };                         // Informational
+  }
+
+  /**
+   * Format as Rich HTML Table for Google Sheets / Excel
+   * Direct pasting renders colors, bold headers, background styling and cell borders!
+   */
+  function formatAsStyledHTML(data) {
+    const rowsHtml = data.map((r, idx) => {
+      const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F9F7FC';
+      const kdCol = getKdColors(r.kd);
+      const intCol = getIntentColors(r.intent);
+
+      return `
+        <tr style="background-color: ${rowBg};">
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; font-weight: 600; color: #111827; text-align: left;">${r.keyword}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; background-color: ${intCol.bg}; color: ${intCol.text}; font-weight: bold;">${r.intent}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; font-weight: bold; color: #1F2937;">${r.volume}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; background-color: ${kdCol.bg}; color: ${kdCol.text}; font-weight: bold;">${r.kd}%</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; color: #374151;">$${r.cpc}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; color: #4B5563;">${r.compLvl}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; color: #6B7280; font-size: 11px;">${r.updated}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <table style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; color: #333333; border: 1px solid #D2D6DC;">
+        <thead>
+          <tr style="background-color: #2B0F52; color: #FFFFFF; font-weight: bold;">
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: left; background-color: #2B0F52; color: #FFFFFF;">Keyword</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">Intent</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Volume</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">KD %</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">CPC</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">Comp. Density</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Freshness</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  }
+
+  /**
+   * Format Plain TSV
    */
   function formatAsTSV(data) {
     const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated'].join('\t');
@@ -148,7 +211,44 @@
     return data.map(r => r.keyword).join('\n');
   }
 
-  function copyText(text) {
+  /**
+   * Dual Clipboard Writer (text/html + text/plain)
+   * When pasting into Google Sheets or Excel, it automatically uses text/html with colors!
+   */
+  async function copyRichTable(data) {
+    const htmlContent = formatAsStyledHTML(data);
+    const plainText = formatAsTSV(data);
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob
+          })
+        ]);
+        return true;
+      }
+    } catch (e) {
+      console.warn('ClipboardItem error, falling back:', e);
+    }
+
+    // Fallback via copy event listener
+    return new Promise((resolve) => {
+      const listener = (evt) => {
+        evt.preventDefault();
+        evt.clipboardData.setData('text/html', htmlContent);
+        evt.clipboardData.setData('text/plain', plainText);
+      };
+      document.addEventListener('copy', listener, { once: true });
+      document.execCommand('copy');
+      resolve(true);
+    });
+  }
+
+  function copyPlainText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
     }
@@ -188,10 +288,9 @@
   }
 
   /**
-   * Render Shadow DOM Floating Widget (completely immune to Semrush styling leaks)
+   * Render Shadow DOM Floating Widget
    */
   function renderWidget() {
-    // Only show on keyword magic or overview pages
     const isKeywordPage = window.location.pathname.includes('/keywordmagic') ||
                           window.location.pathname.includes('/keywordoverview') ||
                           window.location.search.includes('q=');
@@ -231,7 +330,7 @@
         }
 
         .widget-box {
-          width: 256px;
+          width: 260px;
           background: linear-gradient(145deg, #16082e 0%, #0c0219 100%);
           border: 1px solid rgba(199, 125, 255, 0.35);
           border-radius: 14px;
@@ -306,7 +405,7 @@
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          max-width: 170px;
+          max-width: 175px;
         }
 
         .actions-col {
@@ -322,9 +421,9 @@
           justify-content: center;
           gap: 6px;
           width: 100%;
-          padding: 8px 10px;
+          padding: 8.5px 10px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 700;
           color: #ffffff;
           background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
           border: 1px solid rgba(252, 237, 255, 0.35);
@@ -459,17 +558,17 @@
         </div>
 
         <div class="actions-col">
-          <button type="button" class="btn-main" id="btn-tsv">
+          <button type="button" class="btn-main" id="btn-tsv" title="Copies styled colored table ready to paste into Google Sheets or Excel">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
-            Copy for Sheets / Excel
+            Copy Styled (Colored Sheets)
           </button>
 
           <div class="btn-row">
-            <button type="button" class="btn-sub" id="btn-csv">CSV</button>
-            <button type="button" class="btn-sub" id="btn-list">List Only</button>
+            <button type="button" class="btn-sub" id="btn-csv" title="Copy standard CSV">CSV</button>
+            <button type="button" class="btn-sub" id="btn-list" title="Copy plain keyword list">List Only</button>
           </div>
         </div>
 
@@ -490,8 +589,8 @@
         showToast('No keywords detected yet', true);
         return;
       }
-      copyText(formatAsTSV(cachedKeywords)).then(() => {
-        showToast(`✨ Copied ${cachedKeywords.length} keywords for Sheets!`);
+      copyRichTable(cachedKeywords).then(() => {
+        showToast(`✨ Copied ${cachedKeywords.length} styled rows for Sheets!`);
       }).catch(() => showToast('Copy failed', true));
     });
 
@@ -501,7 +600,7 @@
         showToast('No keywords detected yet', true);
         return;
       }
-      copyText(formatAsCSV(cachedKeywords)).then(() => {
+      copyPlainText(formatAsCSV(cachedKeywords)).then(() => {
         showToast(`📄 Copied ${cachedKeywords.length} as CSV!`);
       }).catch(() => showToast('Copy failed', true));
     });
@@ -512,7 +611,7 @@
         showToast('No keywords detected yet', true);
         return;
       }
-      copyText(formatKeywordsOnly(cachedKeywords)).then(() => {
+      copyPlainText(formatKeywordsOnly(cachedKeywords)).then(() => {
         showToast(`🔤 Copied ${cachedKeywords.length} plain keywords!`);
       }).catch(() => showToast('Copy failed', true));
     });
