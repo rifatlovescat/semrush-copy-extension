@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let kgrBadge = '';
       if (kw.kgr !== null && kw.kgr !== undefined) {
         const kgrClass = kw.kgr < 0.25 ? 'kw-kgr-golden' : (kw.kgr <= 1.0 ? 'kw-kgr-moderate' : 'kw-kgr-hard');
-        const kgrLabel = kw.kgr < 0.25 ? '⭐ Golden' : (kw.kgr <= 1.0 ? '⚡ Moderate' : '⛔ Hard');
+        const kgrLabel = kw.kgr < 0.25 ? '? Golden' : (kw.kgr <= 1.0 ? '? Moderate' : '? Hard');
         kgrBadge = `<span class="kw-kgr-pill ${kgrClass}">${kw.kgr} (${kgrLabel})</span>`;
       }
 
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="kw-card-bottom">
             <div class="kw-stat"><span class="kw-stat-label">MSV:</span> <span class="kw-stat-val">${kw.volumeNum.toLocaleString()}</span></div>
             <div class="kw-stat"><span class="kw-stat-label">KD:</span> <span class="kw-stat-val">${kw.kd}%</span></div>
-            <div class="kw-stat"><span class="kw-stat-label">Allintitle:</span> <span class="kw-stat-val">${kw.allintitle !== null ? kw.allintitle.toLocaleString() : '—'}</span></div>
+            <div class="kw-stat"><span class="kw-stat-label">Allintitle:</span> <span class="kw-stat-val">${kw.allintitle !== null ? kw.allintitle.toLocaleString() : '-'}</span></div>
             <div class="kw-stat"><span class="kw-stat-label">CPC:</span> <span class="kw-stat-val">$${kw.cpc}</span></div>
           </div>
         </div>
@@ -160,10 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const googleSearchUrl = `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(r.keyword)}%22`;
       const allintitleDisplay = (r.allintitle !== null && r.allintitle !== undefined)
         ? r.allintitle
-        : `<a href="${googleSearchUrl}" target="_blank" style="color: #7b2cbf; text-decoration: underline; font-weight: 600;">🔍 Check allintitle</a>`;
+        : `<a href="${googleSearchUrl}" target="_blank" style="color: #7b2cbf; text-decoration: underline; font-weight: 600;">?? Check allintitle</a>`;
 
-      const kgrCellFormula = `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
-      const kgrDisplay = (r.kgr !== null && r.kgr !== undefined) ? r.kgr : kgrCellFormula;
+      // Live auto-calculation formula for Google Sheets / Excel: KGR = Allintitle / MSV
+      const kgrCellFormula = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
+      const kgrDisplay = kgrCellFormula;
 
       return `
         <tr style="background-color: ${rowBg};">
@@ -207,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rows = currentKeywords.map((r, idx) => {
       const rowNum = idx + 2;
       const allintitleVal = r.allintitle !== null ? r.allintitle : `=HYPERLINK("https://www.google.com/search?q=allintitle:%22"&A${rowNum}&"%22", "Check allintitle")`;
-      const kgrVal = r.kgr !== null ? r.kgr : `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      const kgrVal = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
       return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].join('\t');
     });
     return [header, ...rows].join('\n');
@@ -219,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rows = currentKeywords.map((r, idx) => {
       const rowNum = idx + 2;
       const allintitleVal = r.allintitle !== null ? r.allintitle : `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(r.keyword)}%22`;
-      const kgrVal = r.kgr !== null ? r.kgr : `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      const kgrVal = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
       return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].map(esc).join(',');
     });
     return [header, ...rows].join('\n');
@@ -244,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'text/plain': textBlob
           })
         ]);
-        showToast(`✨ Copied ${data.length} KGR rows for Sheets!`);
+        showToast(`? Copied ${data.length} KGR rows for Sheets!`);
         return;
       }
     } catch (e) {
@@ -258,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.addEventListener('copy', listener, { once: true });
     document.execCommand('copy');
-    showToast(`✨ Copied ${data.length} KGR rows for Sheets!`);
+    showToast(`? Copied ${data.length} KGR rows for Sheets!`);
   }
 
   function copyPlainText(text, msg) {
@@ -280,8 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isCheckingKgr) return;
     isCheckingKgr = true;
 
-    btnAutoKgr.innerHTML = '<span>⏳</span><span>Checking KGR...</span>';
-    showToast(`⚡ Checking KGR for ${currentKeywords.length} keywords...`);
+    btnAutoKgr.innerHTML = '<span>?</span><span>Checking KGR...</span>';
+    showToast(`? Checking KGR for ${currentKeywords.length} keywords...`);
 
     for (let i = 0; i < currentKeywords.length; i++) {
       const kw = currentKeywords[i].keyword;
@@ -315,9 +316,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     isCheckingKgr = false;
-    btnAutoKgr.innerHTML = '<span>⚡</span><span>Auto-Check KGR (Google)</span>';
+    btnAutoKgr.innerHTML = '<span>?</span><span>Auto-Check KGR (Google)</span>';
     renderKeywords(currentKeywords, currentQuery);
-    showToast(`✨ KGR check complete!`);
+    showToast(`? KGR check complete!`);
   }
 
   // Request Data from Active Tab
@@ -455,12 +456,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnCopyCsv.addEventListener('click', () => {
     if (!currentKeywords.length) return showToast('No keywords to copy!');
-    copyPlainText(getCSVData(), `📄 Copied ${currentKeywords.length} as CSV!`);
+    copyPlainText(getCSVData(), `?? Copied ${currentKeywords.length} as CSV!`);
   });
 
   btnCopyList.addEventListener('click', () => {
     if (!currentKeywords.length) return showToast('No keywords to copy!');
-    copyPlainText(getKeywordsOnly(), `🔤 Copied ${currentKeywords.length} plain keywords!`);
+    copyPlainText(getKeywordsOnly(), `?? Copied ${currentKeywords.length} plain keywords!`);
   });
 
   btnExportFile.addEventListener('click', () => {
@@ -473,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`💾 Downloaded ${currentKeywords.length} keywords!`);
+    showToast(`?? Downloaded ${currentKeywords.length} keywords!`);
   });
 
   btnRefresh.addEventListener('click', () => {

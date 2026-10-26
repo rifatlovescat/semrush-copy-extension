@@ -200,11 +200,12 @@
       const googleSearchUrl = `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(r.keyword)}%22`;
       const allintitleDisplay = (r.allintitle !== null && r.allintitle !== undefined)
         ? r.allintitle
-        : `<a href="${googleSearchUrl}" target="_blank" style="color: #7b2cbf; text-decoration: underline; font-weight: 600;">🔍 Check allintitle</a>`;
+        : `<a href="${googleSearchUrl}" target="_blank" style="color: #7b2cbf; text-decoration: underline; font-weight: 600;">?? Check allintitle</a>`;
 
-      // KGR formula: =IF(ISNUMBER(E2), ROUND(E2/C2, 4), "")
-      const kgrCellFormula = `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
-      const kgrDisplay = (r.kgr !== null && r.kgr !== undefined) ? r.kgr : kgrCellFormula;
+      // Live auto-calculation formula for Google Sheets / Excel: KGR = Allintitle / MSV
+      // Handles plain numbers, text numbers with commas, and blank cells
+      const kgrCellFormula = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
+      const kgrDisplay = kgrCellFormula;
 
       return `
         <tr style="background-color: ${rowBg};">
@@ -251,7 +252,7 @@
     const rows = data.map((r, idx) => {
       const rowNum = idx + 2;
       const allintitleVal = r.allintitle !== null ? r.allintitle : `=HYPERLINK("https://www.google.com/search?q=allintitle:%22"&A${rowNum}&"%22", "Check allintitle")`;
-      const kgrVal = r.kgr !== null ? r.kgr : `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      const kgrVal = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
       return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].join('\t');
     });
     return [header, ...rows].join('\n');
@@ -263,7 +264,7 @@
     const rows = data.map((r, idx) => {
       const rowNum = idx + 2;
       const allintitleVal = r.allintitle !== null ? r.allintitle : `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(r.keyword)}%22`;
-      const kgrVal = r.kgr !== null ? r.kgr : `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      const kgrVal = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
       return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].map(esc).join(',');
     });
     return [header, ...rows].join('\n');
@@ -358,7 +359,7 @@
       return;
     }
 
-    showToast(`⚡ Checking KGR for ${cachedKeywords.length} keywords...`);
+    showToast(`? Checking KGR for ${cachedKeywords.length} keywords...`);
 
     let updatedCount = 0;
     for (let i = 0; i < cachedKeywords.length; i++) {
@@ -400,7 +401,7 @@
     isCheckingKgr = false;
     extractKeywords();
     renderWidget();
-    showToast(`✨ KGR check complete! Click "Copy Styled" to paste into Sheets.`);
+    showToast(`? KGR check complete! Click "Copy Styled" to paste into Sheets.`);
   }
 
   /**
@@ -702,7 +703,7 @@
           </button>
 
           <button type="button" class="btn-kgr" id="btn-auto-kgr" title="Auto-queries Google allintitle count for all 10 keywords">
-            <span>⚡</span>
+            <span>?</span>
             <span>${isCheckingKgr ? 'Checking KGR...' : 'Auto-Check KGR (Google)'}</span>
           </button>
 
@@ -713,7 +714,7 @@
         </div>
 
         <div class="fixed-footer">
-          Made With ❤️ By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="r1fat-link">r1fat</a>
+          Made With ?? By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="r1fat-link">r1fat</a>
         </div>
       </div>
     `;
@@ -731,7 +732,7 @@
         return;
       }
       copyRichTable(cachedKeywords).then(() => {
-        showToast(`✨ Copied ${cachedKeywords.length} KGR rows for Sheets!`);
+        showToast(`? Copied ${cachedKeywords.length} KGR rows for Sheets!`);
       }).catch(() => showToast('Copy failed', true));
     });
 
@@ -746,7 +747,7 @@
         return;
       }
       copyPlainText(formatAsCSV(cachedKeywords)).then(() => {
-        showToast(`📄 Copied ${cachedKeywords.length} as CSV!`);
+        showToast(`?? Copied ${cachedKeywords.length} as CSV!`);
       }).catch(() => showToast('Copy failed', true));
     });
 
@@ -757,7 +758,7 @@
         return;
       }
       copyPlainText(formatKeywordsOnly(cachedKeywords)).then(() => {
-        showToast(`🔤 Copied ${cachedKeywords.length} plain keywords!`);
+        showToast(`?? Copied ${cachedKeywords.length} plain keywords!`);
       }).catch(() => showToast('Copy failed', true));
     });
   }
