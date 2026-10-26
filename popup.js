@@ -1,5 +1,5 @@
 /**
- * Semrush Quick Copy - Popup Script
+ * Semrush Quick Copy - Popup Script (V2)
  * Author: r1fat (https://r1fat.pages.dev)
  */
 
@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.clipboard.writeText(text).then(() => {
       showToast(successMsg);
     }).catch(() => {
-      // Fallback
       const ta = document.createElement('textarea');
       ta.value = text;
       document.body.appendChild(ta);
@@ -62,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <p>No active keywords detected on this page.<br>Make sure you are on a Semrush Keyword Magic or Overview page.</p>
+          <p>No active keywords detected on this page.<br>Make sure you have searched for a keyword on Semrush.</p>
         </div>
       `;
       return;
@@ -133,12 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // If not on semrush.com
+      // Check if not on semrush.com
       if (!activeTab.url || !activeTab.url.includes('semrush.com')) {
         keywordsListEl.innerHTML = `
           <div class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width: 32px; height: 32px; color: var(--accent-lavender);">
-              <circle cx="12" cy="12" r="10"></line>
+              <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
@@ -150,47 +149,79 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Try sending message to content script
+      // Try sending message to content script first
       chrome.tabs.sendMessage(activeTab.id, { action: 'GET_DATA' }, (response) => {
-        if (chrome.runtime.lastError || !response) {
-          // Fallback: inject extraction function directly
+        if (!chrome.runtime.lastError && response && response.keywords && response.keywords.length > 0) {
+          renderKeywords(response.keywords, response.query);
+        } else {
+          // Fallback direct execution script with identical robust logic
           chrome.scripting.executeScript({
             target: { tabId: activeTab.id },
             func: () => {
-              const rows = document.querySelectorAll('div[data-testid="table-row"], div.sm-table-layout__row');
+              const rows = document.querySelectorAll('div[data-testid="table-row"], div.sm-table-layout__row, div[role="row"]');
               const items = [];
+
               rows.forEach((row) => {
-                if (row.querySelector('[disabled]') || row.classList.contains('__disabled_1t5yy-kmt_')) return;
                 const kwAnchor = row.querySelector('[data-testid="table-cell-keyword"] a') ||
                                  row.querySelector('.sm-cell-phrase__link') ||
+                                 row.querySelector('a[href*="/keywordoverview/"]') ||
                                  row.querySelector('[data-ui-name="Checkbox.Text"]');
-                const keyword = kwAnchor ? kwAnchor.textContent.trim() : '';
-                if (!keyword) return;
+                if (!kwAnchor) return;
 
-                const intentEl = row.querySelector('[data-testid="table-cell-intent"] [aria-label]') ||
-                                 row.querySelector('[data-testid="table-cell-intent"]');
-                const intent = intentEl ? (intentEl.getAttribute('aria-label') || intentEl.textContent).replace(/\.\s*Apply filter/i, '').trim() : 'N/A';
+                const keyword = kwAnchor.textContent.trim();
+                if (!keyword || keyword.toLowerCase() === 'keyword') return;
 
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (checkbox && checkbox.disabled) return;
+                if (row.classList.contains('sm-table-row-layout__locked')) return;
+
+                let intent = 'Informational';
+                const intentEl = row.querySelector('[data-testid="table-cell-intent"]');
+                if (intentEl) {
+                  const btn = intentEl.querySelector('[aria-label]');
+                  if (btn) {
+                    intent = btn.getAttribute('aria-label').replace(/\.\s*Apply filter/i, '').trim();
+                  } else {
+                    const raw = intentEl.textContent.trim();
+                    if (raw === 'I') intent = 'Informational';
+                    else if (raw === 'C') intent = 'Commercial';
+                    else if (raw === 'T') intent = 'Transactional';
+                    else if (raw === 'N') intent = 'Navigational';
+                    else if (raw) intent = raw;
+                  }
+                }
+
+                let volume = '0';
                 const volEl = row.querySelector('[data-testid="table-cell-volume"]');
-                const volume = volEl ? volEl.textContent.trim() : '0';
+                if (volEl) volume = volEl.textContent.trim();
 
+                let kd = '0';
                 const kdEl = row.querySelector('[data-testid="table-cell-kd"]');
-                const kd = kdEl ? kdEl.textContent.trim() : '0';
+                if (kdEl) kd = kdEl.textContent.trim().replace('%', '');
 
+                let cpc = '0.00';
                 const cpcEl = row.querySelector('[data-testid="table-cell-cpc"]');
-                const cpc = cpcEl ? cpcEl.textContent.trim() : '0.00';
+                if (cpcEl) cpc = cpcEl.textContent.trim().replace('$', '');
 
+                let compLvl = '0.00';
                 const compEl = row.querySelector('[data-testid="table-cell-comp-lvl"]');
-                const compLvl = compEl ? compEl.textContent.trim() : '0.00';
+                if (compEl) compLvl = compEl.textContent.trim();
 
+                let updated = 'Recent';
                 const upEl = row.querySelector('[data-testid="table-cell-updated"]') ||
                              row.querySelector('.sm-last-changes-cell__text');
-                const updated = upEl ? upEl.textContent.trim() : 'Recent';
+                if (upEl) {
+                  const t = upEl.textContent.trim();
+                  if (t) updated = t;
+                }
 
                 items.push({ keyword, intent, volume, kd, cpc, compLvl, updated });
               });
 
-              const q = new URLSearchParams(window.location.search).get('q') || '';
+              const qParam = new URLSearchParams(window.location.search).get('q');
+              const searchInput = document.querySelector('input[data-test="searchbar_input"]');
+              const q = qParam || (searchInput ? searchInput.value : '');
+
               return { success: true, query: q, keywords: items };
             }
           }).then((res) => {
@@ -203,8 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }).catch(() => {
             renderKeywords([], '');
           });
-        } else {
-          renderKeywords(response.keywords, response.query);
         }
       });
     });

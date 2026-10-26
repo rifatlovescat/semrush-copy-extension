@@ -1,95 +1,116 @@
 /**
- * Semrush Quick Copy - Content Script
+ * Semrush Quick Copy - Content Script (V2)
  * Author: r1fat (https://r1fat.pages.dev)
  */
 
 (function () {
   'use strict';
 
-  // Prevent multiple injections
-  if (window.__SEMRUSH_QUICK_COPY_INJECTED__) return;
-  window.__SEMRUSH_QUICK_COPY_INJECTED__ = true;
-
   // State
   let cachedKeywords = [];
   let currentQuery = '';
-  let widgetContainer = null;
-  let toastTimeout = null;
+  let widgetHost = null;
+  let shadowRoot = null;
+  let toastTimer = null;
 
   /**
-   * Extract current search query from URL or search bar
+   * Extract current search query from URL or search input
    */
   function getSearchQuery() {
     const params = new URLSearchParams(window.location.search);
     const qParam = params.get('q');
-    if (qParam) return qParam.trim();
+    if (qParam && qParam.trim()) return qParam.trim();
 
-    // Fallback to search input in DOM
     const searchInput = document.querySelector('input[data-test="searchbar_input"]') ||
                         document.querySelector('input[name="q"]') ||
                         document.querySelector('input[type="search"]');
-    return searchInput ? searchInput.value.trim() : '';
+    return searchInput && searchInput.value ? searchInput.value.trim() : '';
   }
 
   /**
-   * Scrape active keyword rows from the Semrush DOM
+   * Scrape active keyword rows with robust selectors
    */
   function extractKeywords() {
-    const rows = document.querySelectorAll('div[data-testid="table-row"], div.sm-table-layout__row');
+    const rows = document.querySelectorAll('div[data-testid="table-row"], div.sm-table-layout__row, div[role="row"]');
     const items = [];
 
     rows.forEach((row) => {
-      // Filter out locked / upgrade skeleton rows
-      const isDisabled = row.querySelector('[disabled]') ||
-                         row.classList.contains('__disabled_1t5yy-kmt_') ||
-                         row.querySelector('.sm-table-row-layout__locked');
-      
-      const hasKeywordCell = row.querySelector('[data-testid="table-cell-keyword"]') ||
-                             row.querySelector('.sm-cell-phrase') ||
-                             row.querySelector('[data-ui-name="Checkbox.Text"]');
-
-      if (isDisabled || !hasKeywordCell) return;
-
-      // 1. Keyword Text
+      // 1. Identify keyword anchor / text
       const kwAnchor = row.querySelector('[data-testid="table-cell-keyword"] a') ||
                        row.querySelector('.sm-cell-phrase__link') ||
+                       row.querySelector('a[href*="/keywordoverview/"]') ||
                        row.querySelector('[data-ui-name="Checkbox.Text"]');
-      const keyword = kwAnchor ? kwAnchor.textContent.trim() : '';
-      if (!keyword) return;
+      
+      // If no keyword anchor exists, this is a skeleton/locked row or header
+      if (!kwAnchor) return;
 
-      // 2. Search Intent
-      const intentEl = row.querySelector('[data-testid="table-cell-intent"] [aria-label]') ||
-                       row.querySelector('[data-testid="table-cell-intent"]');
-      let intent = '';
+      const keyword = kwAnchor.textContent.trim();
+      if (!keyword || keyword.toLowerCase() === 'keyword') return;
+
+      // 2. Check if the checkbox is explicitly disabled (Semrush paywall row indicator)
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      if (checkbox && checkbox.disabled) return;
+
+      // 3. Skip locked container if marked
+      if (row.classList.contains('sm-table-row-layout__locked')) return;
+
+      // 4. Extract Intent
+      let intent = 'Informational';
+      const intentEl = row.querySelector('[data-testid="table-cell-intent"]');
       if (intentEl) {
-        const aria = intentEl.getAttribute('aria-label');
-        intent = aria ? aria.replace(/\.\s*Apply filter/i, '').trim() : intentEl.textContent.trim();
+        const btn = intentEl.querySelector('[aria-label]');
+        if (btn) {
+          intent = btn.getAttribute('aria-label').replace(/\.\s*Apply filter/i, '').trim();
+        } else {
+          const raw = intentEl.textContent.trim();
+          if (raw === 'I') intent = 'Informational';
+          else if (raw === 'C') intent = 'Commercial';
+          else if (raw === 'T') intent = 'Transactional';
+          else if (raw === 'N') intent = 'Navigational';
+          else if (raw) intent = raw;
+        }
       }
 
-      // 3. Search Volume
+      // 5. Volume
+      let volume = '0';
       const volEl = row.querySelector('[data-testid="table-cell-volume"]');
-      const volume = volEl ? volEl.textContent.trim() : '';
+      if (volEl) {
+        volume = volEl.textContent.trim();
+      }
 
-      // 4. Keyword Difficulty (KD %)
+      // 6. KD %
+      let kd = '0';
       const kdEl = row.querySelector('[data-testid="table-cell-kd"]');
-      const kd = kdEl ? kdEl.textContent.trim() : '';
+      if (kdEl) {
+        kd = kdEl.textContent.trim().replace('%', '');
+      }
 
-      // 5. Cost Per Click (CPC)
+      // 7. CPC
+      let cpc = '0.00';
       const cpcEl = row.querySelector('[data-testid="table-cell-cpc"]');
-      const cpc = cpcEl ? cpcEl.textContent.trim() : '';
+      if (cpcEl) {
+        cpc = cpcEl.textContent.trim().replace('$', '');
+      }
 
-      // 6. Competitive Density (Comp. Level)
+      // 8. Competitive Density
+      let compLvl = '0.00';
       const compEl = row.querySelector('[data-testid="table-cell-comp-lvl"]');
-      const compLvl = compEl ? compEl.textContent.trim() : '';
+      if (compEl) {
+        compLvl = compEl.textContent.trim();
+      }
 
-      // 7. Last Updated Freshness
+      // 9. Last Updated Freshness
+      let updated = 'Recent';
       const upEl = row.querySelector('[data-testid="table-cell-updated"]') ||
                    row.querySelector('.sm-last-changes-cell__text');
-      const updated = upEl ? upEl.textContent.trim() : '';
+      if (upEl) {
+        const t = upEl.textContent.trim();
+        if (t) updated = t;
+      }
 
       items.push({
         keyword,
-        intent: intent || 'N/A',
+        intent: intent || 'Informational',
         volume: volume || '0',
         kd: kd || '0',
         cpc: cpc || '0.00',
@@ -104,7 +125,7 @@
   }
 
   /**
-   * Format rows to TSV for Excel / Google Sheets
+   * Clipboard Formatters
    */
   function formatAsTSV(data) {
     const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated'].join('\t');
@@ -114,179 +135,390 @@
     return [header, ...rows].join('\n');
   }
 
-  /**
-   * Format rows to CSV
-   */
   function formatAsCSV(data) {
-    const escapeCsv = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
-    const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated']
-      .map(escapeCsv).join(',');
+    const esc = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
+    const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated'].map(esc).join(',');
     const rows = data.map(r =>
-      [r.keyword, r.intent, r.volume, r.kd, r.cpc, r.compLvl, r.updated].map(escapeCsv).join(',')
+      [r.keyword, r.intent, r.volume, r.kd, r.cpc, r.compLvl, r.updated].map(esc).join(',')
     );
     return [header, ...rows].join('\n');
   }
 
-  /**
-   * Format keywords only (newline separated)
-   */
   function formatKeywordsOnly(data) {
     return data.map(r => r.keyword).join('\n');
   }
 
-  /**
-   * Copy string to clipboard with fallback
-   */
-  function copyTextToClipboard(text) {
+  function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text);
     }
     return new Promise((resolve, reject) => {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
       try {
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textarea);
-        if (successful) resolve();
-        else reject(new Error('Copy command failed'));
-      } catch (err) {
-        document.body.removeChild(textarea);
-        reject(err);
+        if (document.execCommand('copy')) resolve();
+        else reject(new Error('Copy failed'));
+      } catch (e) {
+        reject(e);
+      } finally {
+        document.body.removeChild(ta);
       }
     });
   }
 
   /**
-   * Show toast notification
+   * Show toast within the isolated Shadow DOM
    */
-  function showToast(message, isError = false) {
-    let toast = document.getElementById('sqc-toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'sqc-toast';
-      document.body.appendChild(toast);
-    }
+  function showToast(msg, isError = false) {
+    if (!shadowRoot) return;
+    const toast = shadowRoot.querySelector('#sqc-toast');
+    if (!toast) return;
 
-    toast.textContent = message;
+    toast.textContent = msg;
     toast.className = 'sqc-toast show' + (isError ? ' error' : '');
 
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => {
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
       toast.className = 'sqc-toast';
-    }, 2800);
+    }, 2400);
   }
 
   /**
-   * In-page Floating Widget
+   * Render Shadow DOM Floating Widget (completely immune to Semrush styling leaks)
    */
-  function createOrUpdateFloatingWidget() {
-    // Only display on Semrush keyword pages
+  function renderWidget() {
+    // Only show on keyword magic or overview pages
     const isKeywordPage = window.location.pathname.includes('/keywordmagic') ||
                           window.location.pathname.includes('/keywordoverview') ||
                           window.location.search.includes('q=');
 
     if (!isKeywordPage) {
-      if (widgetContainer) widgetContainer.style.display = 'none';
+      if (widgetHost) widgetHost.style.display = 'none';
       return;
     }
 
     extractKeywords();
 
-    if (!widgetContainer) {
-      widgetContainer = document.createElement('div');
-      widgetContainer.id = 'sqc-floating-widget';
-      document.body.appendChild(widgetContainer);
+    if (!widgetHost) {
+      widgetHost = document.createElement('div');
+      widgetHost.id = 'sqc-floating-root';
+      widgetHost.style.all = 'initial';
+      widgetHost.style.position = 'fixed';
+      widgetHost.style.bottom = '20px';
+      widgetHost.style.right = '20px';
+      widgetHost.style.zIndex = '2147483647';
+      document.body.appendChild(widgetHost);
+      shadowRoot = widgetHost.attachShadow({ mode: 'open' });
     }
 
-    widgetContainer.style.display = 'block';
+    widgetHost.style.display = 'block';
 
     const count = cachedKeywords.length;
     const query = currentQuery || 'Keywords';
 
-    widgetContainer.innerHTML = `
-      <div class="sqc-widget-card">
-        <div class="sqc-widget-header">
-          <div class="sqc-brand">
-            <span class="sqc-dot"></span>
-            <span class="sqc-title">Semrush Quick Copy</span>
+    shadowRoot.innerHTML = `
+      <style>
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          line-height: 1.25;
+        }
+
+        .widget-box {
+          width: 256px;
+          background: linear-gradient(145deg, #16082e 0%, #0c0219 100%);
+          border: 1px solid rgba(199, 125, 255, 0.35);
+          border-radius: 14px;
+          padding: 12px 14px 10px 14px;
+          box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 16px rgba(157, 78, 221, 0.25);
+          color: #fcedff;
+          position: relative;
+          user-select: none;
+        }
+
+        .header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        }
+
+        .brand-wrap {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .pulse-dot {
+          width: 8px;
+          height: 8px;
+          background: #c77dff;
+          border-radius: 50%;
+          box-shadow: 0 0 8px #c77dff;
+          flex-shrink: 0;
+        }
+
+        .brand-title {
+          font-size: 12px;
+          font-weight: 700;
+          color: #ffffff;
+          letter-spacing: 0.2px;
+        }
+
+        .count-pill {
+          font-size: 10.5px;
+          font-weight: 700;
+          padding: 2px 7px;
+          background: rgba(199, 125, 255, 0.18);
+          color: #e0aaff;
+          border: 1px solid rgba(224, 170, 255, 0.4);
+          border-radius: 10px;
+        }
+
+        .query-box {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: rgba(28, 10, 56, 0.7);
+          border: 1px solid rgba(199, 125, 255, 0.18);
+          border-radius: 6px;
+          padding: 4px 8px;
+          font-size: 11px;
+          margin-bottom: 9px;
+        }
+
+        .query-lbl {
+          color: #c77dff;
+          font-weight: 700;
+          font-size: 10px;
+          text-transform: uppercase;
+        }
+
+        .query-txt {
+          color: #ffffff;
+          font-weight: 600;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 170px;
+        }
+
+        .actions-col {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 9px;
+        }
+
+        .btn-main {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          width: 100%;
+          padding: 8px 10px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #ffffff;
+          background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
+          border: 1px solid rgba(252, 237, 255, 0.35);
+          border-radius: 8px;
+          cursor: pointer;
+          box-shadow: 0 3px 12px rgba(123, 44, 191, 0.35);
+          transition: all 0.2s ease;
+        }
+
+        .btn-main:hover {
+          background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 5px 16px rgba(157, 78, 221, 0.5);
+        }
+
+        .btn-main:active {
+          transform: translateY(0);
+        }
+
+        .btn-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+        }
+
+        .btn-sub {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 6px 8px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #fcedff;
+          background: rgba(38, 14, 75, 0.7);
+          border: 1px solid rgba(199, 125, 255, 0.22);
+          border-radius: 7px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-sub:hover {
+          background: rgba(65, 24, 115, 0.9);
+          border-color: rgba(224, 170, 255, 0.5);
+          color: #ffffff;
+        }
+
+        .fixed-footer {
+          text-align: center;
+          font-size: 11px;
+          color: #bfa7d9;
+          padding-top: 7px;
+          border-top: 1px solid rgba(199, 125, 255, 0.16);
+          margin-top: 2px;
+        }
+
+        .r1fat-link {
+          color: #e0aaff !important;
+          font-weight: 700;
+          text-decoration: none !important;
+          cursor: pointer;
+          display: inline-block;
+          text-shadow: 0 0 6px rgba(224, 170, 255, 0.8), 0 0 14px rgba(199, 125, 255, 0.6);
+          animation: neon-glow 2s ease-in-out infinite alternate;
+          transition: transform 0.2s ease;
+        }
+
+        .r1fat-link:hover {
+          color: #ffffff !important;
+          text-shadow: 0 0 10px #fcedff, 0 0 20px #e0aaff, 0 0 30px #c77dff;
+          transform: scale(1.08);
+        }
+
+        @keyframes neon-glow {
+          0% {
+            color: #e0aaff;
+            text-shadow: 0 0 4px rgba(224, 170, 255, 0.6);
+          }
+          50% {
+            color: #fcedff;
+            text-shadow: 0 0 8px rgba(252, 237, 255, 0.9), 0 0 16px rgba(224, 170, 255, 0.8);
+          }
+          100% {
+            color: #e0aaff;
+            text-shadow: 0 0 4px rgba(224, 170, 255, 0.6);
+          }
+        }
+
+        .sqc-toast {
+          position: absolute;
+          top: -38px;
+          left: 50%;
+          transform: translateX(-50%) translateY(8px);
+          background: #180533;
+          border: 1px solid #c77dff;
+          color: #fcedff;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .sqc-toast.show {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+
+        .sqc-toast.error {
+          border-color: #ff6b6b;
+          color: #ffe3e3;
+        }
+      </style>
+
+      <div class="widget-box">
+        <div id="sqc-toast" class="sqc-toast">Copied!</div>
+
+        <div class="header-row">
+          <div class="brand-wrap">
+            <span class="pulse-dot"></span>
+            <span class="brand-title">Semrush Quick Copy</span>
           </div>
-          <span class="sqc-badge">${count} Found</span>
+          <span class="count-pill">${count} Found</span>
         </div>
 
-        <div class="sqc-query-display">
-          <span class="sqc-query-label">Target:</span>
-          <span class="sqc-query-val" title="${query}">"${query}"</span>
+        <div class="query-box">
+          <span class="query-lbl">Target:</span>
+          <span class="query-txt" title="${query}">"${query}"</span>
         </div>
 
-        <div class="sqc-actions">
-          <button type="button" class="sqc-btn sqc-btn-primary" id="sqc-copy-tsv">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sqc-icon">
+        <div class="actions-col">
+          <button type="button" class="btn-main" id="btn-tsv">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
             Copy for Sheets / Excel
           </button>
 
-          <div class="sqc-btn-group">
-            <button type="button" class="sqc-btn sqc-btn-secondary" id="sqc-copy-csv" title="Copy comma-separated values">
-              CSV
-            </button>
-            <button type="button" class="sqc-btn sqc-btn-secondary" id="sqc-copy-list" title="Copy keyword list only">
-              List Only
-            </button>
+          <div class="btn-row">
+            <button type="button" class="btn-sub" id="btn-csv">CSV</button>
+            <button type="button" class="btn-sub" id="btn-list">List Only</button>
           </div>
         </div>
 
-        <footer class="sqc-fixed-footer">
-          Made With ❤️ By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="sqc-glow-link">r1fat</a>
-        </footer>
+        <div class="fixed-footer">
+          Made With ❤️ By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="r1fat-link">r1fat</a>
+        </div>
       </div>
     `;
 
-    // Event listeners
-    const btnTsv = widgetContainer.querySelector('#sqc-copy-tsv');
-    const btnCsv = widgetContainer.querySelector('#sqc-copy-csv');
-    const btnList = widgetContainer.querySelector('#sqc-copy-list');
+    // Event handlers inside Shadow DOM
+    const btnTsv = shadowRoot.querySelector('#btn-tsv');
+    const btnCsv = shadowRoot.querySelector('#btn-csv');
+    const btnList = shadowRoot.querySelector('#btn-list');
 
     btnTsv?.addEventListener('click', () => {
       extractKeywords();
       if (!cachedKeywords.length) {
-        showToast('No keyword rows detected yet. Try refreshing!', true);
+        showToast('No keywords detected yet', true);
         return;
       }
-      copyTextToClipboard(formatAsTSV(cachedKeywords)).then(() => {
-        showToast(`✨ Copied ${cachedKeywords.length} keywords for Sheets/Excel!`);
-      }).catch(() => showToast('Failed to copy to clipboard', true));
+      copyText(formatAsTSV(cachedKeywords)).then(() => {
+        showToast(`✨ Copied ${cachedKeywords.length} keywords for Sheets!`);
+      }).catch(() => showToast('Copy failed', true));
     });
 
     btnCsv?.addEventListener('click', () => {
       extractKeywords();
       if (!cachedKeywords.length) {
-        showToast('No keyword rows detected yet', true);
+        showToast('No keywords detected yet', true);
         return;
       }
-      copyTextToClipboard(formatAsCSV(cachedKeywords)).then(() => {
-        showToast(`📄 Copied ${cachedKeywords.length} keywords as CSV!`);
-      }).catch(() => showToast('Failed to copy to clipboard', true));
+      copyText(formatAsCSV(cachedKeywords)).then(() => {
+        showToast(`📄 Copied ${cachedKeywords.length} as CSV!`);
+      }).catch(() => showToast('Copy failed', true));
     });
 
     btnList?.addEventListener('click', () => {
       extractKeywords();
       if (!cachedKeywords.length) {
-        showToast('No keyword rows detected yet', true);
+        showToast('No keywords detected yet', true);
         return;
       }
-      copyTextToClipboard(formatKeywordsOnly(cachedKeywords)).then(() => {
+      copyText(formatKeywordsOnly(cachedKeywords)).then(() => {
         showToast(`🔤 Copied ${cachedKeywords.length} plain keywords!`);
-      }).catch(() => showToast('Failed to copy to clipboard', true));
+      }).catch(() => showToast('Copy failed', true));
     });
   }
 
-  // Handle messages from popup
+  // Listen for messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'GET_DATA') {
       const data = extractKeywords();
@@ -296,39 +528,27 @@
         count: data.length,
         keywords: data
       });
-    } else if (request.action === 'COPY_TSV') {
-      const data = extractKeywords();
-      copyTextToClipboard(formatAsTSV(data)).then(() => {
-        showToast(`✨ Copied ${data.length} keywords!`);
-        sendResponse({ success: true, count: data.length });
-      });
-      return true; // asynchronous response
     }
   });
 
-  // Watch for dynamic DOM changes (since Semrush is a Single Page Application)
-  let observerTimer = null;
+  // Observe SPA DOM updates
+  let updateTimer = null;
   const observer = new MutationObserver(() => {
-    clearTimeout(observerTimer);
-    observerTimer = setTimeout(() => {
-      createOrUpdateFloatingWidget();
-    }, 500);
+    clearTimeout(updateTimer);
+    updateTimer = setTimeout(() => {
+      renderWidget();
+    }, 400);
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+  observer.observe(document.body, { childList: true, subtree: true });
 
-  // Also listen for URL history changes
   window.addEventListener('popstate', () => {
-    setTimeout(createOrUpdateFloatingWidget, 600);
+    setTimeout(renderWidget, 500);
   });
 
-  // Initial setup when document is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createOrUpdateFloatingWidget);
+    document.addEventListener('DOMContentLoaded', renderWidget);
   } else {
-    setTimeout(createOrUpdateFloatingWidget, 800);
+    setTimeout(renderWidget, 600);
   }
 })();
