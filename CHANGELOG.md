@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-10-26
+
+### Added
+- **KGR (Keyword Golden Ratio) Integration**:
+  - Exact column format: `Keyword | Intent | MSV | KD | ALLINTITLE | KGR | CPC | Comp | Updated`.
+  - **Live Google Sheets Formula**: Injected formula `=IF(ISNUMBER(E2), ROUND(E2/C2, 4), "")` for immediate auto-calculation in Google Sheets.
+  - **KGR Cell Dynamic Color-Coding**:
+    - `KGR < 0.25`: Soft Green (`#E6F4EA` / `#137333`) - ⭐ Golden / Easy
+    - `0.25 <= KGR <= 1.00`: Soft Yellow (`#FEF7E0` / `#B06000`) - ⚡ Moderate
+    - `KGR > 1.00`: Soft Red (`#FCE8E6` / `#C5221F`) - ⛔ Hard
+- **Google Search allintitle Auto-Grabber (`google_content.js`)**:
+  - Automatically runs on `google.com/search?q=allintitle:...`.
+  - Extracts the exact result count from Google's `#result-stats` (e.g., `About 174 results`).
+  - Automatically caches the count to `chrome.storage.local` and displays an on-page confirmation toast badge.
+- **⚡ Auto-Check KGR Button**:
+  - Added directly into the on-page floating widget and popup.
+  - Sequentially queries Google with safe delay to populate allintitle counts automatically.
+- **1-Click Hyperlinks**:
+  - Pre-fills unchecked allintitle cells with direct Google search formulas: `=HYPERLINK("https://www.google.com/search?q=allintitle:%22"&A2&"%22", "🔍 Check allintitle")`.
+
+---
+
 ## [1.1.0] - 2026-10-26
 
 ### Added

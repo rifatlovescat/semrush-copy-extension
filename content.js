@@ -1,5 +1,5 @@
 /**
- * Semrush Quick Copy - Content Script (V3 - Rich Styled Clipboard for Google Sheets)
+ * Semrush Quick Copy - Content Script (V4 - KGR Auto-Calculation & Google Grabber)
  * Author: r1fat (https://r1fat.pages.dev)
  */
 
@@ -8,10 +8,32 @@
 
   // State
   let cachedKeywords = [];
+  let cachedAllintitle = {};
   let currentQuery = '';
   let widgetHost = null;
   let shadowRoot = null;
   let toastTimer = null;
+  let isCheckingKgr = false;
+
+  /**
+   * Load stored allintitle results from chrome.storage.local
+   */
+  function loadStoredKgr(callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(null, (items) => {
+        const result = {};
+        for (const [key, val] of Object.entries(items || {})) {
+          if (key.startsWith('kgr_')) {
+            result[key.slice(4)] = val;
+          }
+        }
+        cachedAllintitle = result;
+        if (callback) callback(cachedAllintitle);
+      });
+    } else {
+      if (callback) callback({});
+    }
+  }
 
   /**
    * Extract current search query from URL or search input
@@ -41,20 +63,17 @@
                        row.querySelector('a[href*="/keywordoverview/"]') ||
                        row.querySelector('[data-ui-name="Checkbox.Text"]');
       
-      // If no keyword anchor exists, this is a skeleton/locked row or header
-      if (!kwAnchor) return;
+      if (!kwAnchor) return; // Skip skeleton/paywalled rows
 
       const keyword = kwAnchor.textContent.trim();
       if (!keyword || keyword.toLowerCase() === 'keyword') return;
 
-      // 2. Check if the checkbox is explicitly disabled (Semrush paywall row indicator)
+      // 2. Check if the checkbox is explicitly disabled
       const checkbox = row.querySelector('input[type="checkbox"]');
       if (checkbox && checkbox.disabled) return;
-
-      // 3. Skip locked container if marked
       if (row.classList.contains('sm-table-row-layout__locked')) return;
 
-      // 4. Extract Intent
+      // 3. Extract Intent
       let intent = 'Informational';
       const intentEl = row.querySelector('[data-testid="table-cell-intent"]');
       if (intentEl) {
@@ -71,35 +90,36 @@
         }
       }
 
-      // 5. Volume
+      // 4. MSV (Monthly Search Volume)
       let volume = '0';
       const volEl = row.querySelector('[data-testid="table-cell-volume"]');
       if (volEl) {
         volume = volEl.textContent.trim();
       }
+      const rawVolumeNum = parseInt(volume.replace(/,/g, ''), 10) || 0;
 
-      // 6. KD %
+      // 5. KD %
       let kd = '0';
       const kdEl = row.querySelector('[data-testid="table-cell-kd"]');
       if (kdEl) {
         kd = kdEl.textContent.trim().replace('%', '');
       }
 
-      // 7. CPC
+      // 6. CPC
       let cpc = '0.00';
       const cpcEl = row.querySelector('[data-testid="table-cell-cpc"]');
       if (cpcEl) {
         cpc = cpcEl.textContent.trim().replace('$', '');
       }
 
-      // 8. Competitive Density
+      // 7. Competitive Density
       let compLvl = '0.00';
       const compEl = row.querySelector('[data-testid="table-cell-comp-lvl"]');
       if (compEl) {
         compLvl = compEl.textContent.trim();
       }
 
-      // 9. Last Updated Freshness
+      // 8. Last Updated Freshness
       let updated = 'Recent';
       const upEl = row.querySelector('[data-testid="table-cell-updated"]') ||
                    row.querySelector('.sm-last-changes-cell__text');
@@ -108,11 +128,22 @@
         if (t) updated = t;
       }
 
+      // 9. Allintitle & KGR from cache
+      const normKw = keyword.toLowerCase();
+      const allintitleCount = cachedAllintitle[normKw] !== undefined ? cachedAllintitle[normKw] : null;
+      let kgr = null;
+      if (allintitleCount !== null && rawVolumeNum > 0) {
+        kgr = +(allintitleCount / rawVolumeNum).toFixed(4);
+      }
+
       items.push({
         keyword,
         intent: intent || 'Informational',
         volume: volume || '0',
+        volumeNum: rawVolumeNum,
         kd: kd || '0',
+        allintitle: allintitleCount,
+        kgr: kgr,
         cpc: cpc || '0.00',
         compLvl: compLvl || '0.00',
         updated: updated || 'Recent'
@@ -125,41 +156,64 @@
   }
 
   /**
-   * Color Helpers for Google Sheets Styling
+   * Color Helpers
    */
   function getKdColors(kdStr) {
     const kd = parseInt(kdStr, 10) || 0;
-    if (kd < 30) return { bg: '#E6F4EA', text: '#137333' }; // Very Easy - Soft Green
-    if (kd < 50) return { bg: '#FEF7E0', text: '#B06000' }; // Possible - Soft Yellow
-    if (kd < 70) return { bg: '#FEEDDC', text: '#C05621' }; // Difficult - Soft Orange
-    if (kd < 85) return { bg: '#FCE8E6', text: '#C5221F' }; // Hard - Soft Red
-    return { bg: '#F8D7DA', text: '#721C24' };              // Very Hard - Deep Red
+    if (kd < 30) return { bg: '#E6F4EA', text: '#137333' }; // Very Easy
+    if (kd < 50) return { bg: '#FEF7E0', text: '#B06000' }; // Possible
+    if (kd < 70) return { bg: '#FEEDDC', text: '#C05621' }; // Difficult
+    if (kd < 85) return { bg: '#FCE8E6', text: '#C5221F' }; // Hard
+    return { bg: '#F8D7DA', text: '#721C24' };              // Very Hard
   }
 
   function getIntentColors(intentStr) {
     const i = (intentStr || '').toLowerCase();
-    if (i.includes('comm')) return { bg: '#FEF7E0', text: '#B06000' }; // Commercial
-    if (i.includes('trans')) return { bg: '#FCE8E6', text: '#C5221F' }; // Transactional
-    if (i.includes('nav')) return { bg: '#F3E8FD', text: '#7627BB' };   // Navigational
-    return { bg: '#E8F0FE', text: '#1967D2' };                         // Informational
+    if (i.includes('comm')) return { bg: '#FEF7E0', text: '#B06000' };
+    if (i.includes('trans')) return { bg: '#FCE8E6', text: '#C5221F' };
+    if (i.includes('nav')) return { bg: '#F3E8FD', text: '#7627BB' };
+    return { bg: '#E8F0FE', text: '#1967D2' };
+  }
+
+  function getKgrColors(kgrVal) {
+    if (kgrVal === null || kgrVal === undefined) {
+      return { bg: '#F3F4F6', text: '#6B7280' };
+    }
+    if (kgrVal < 0.25) return { bg: '#E6F4EA', text: '#137333' }; // Golden (<0.25)
+    if (kgrVal <= 1.00) return { bg: '#FEF7E0', text: '#B06000' }; // Moderate (0.25-1.0)
+    return { bg: '#FCE8E6', text: '#C5221F' };                     // Hard (>1.0)
   }
 
   /**
    * Format as Rich HTML Table for Google Sheets / Excel
-   * Direct pasting renders colors, bold headers, background styling and cell borders!
+   * Columns: Keyword | Intent | MSV | KD | ALLINTITLE | KGR | CPC | Comp | Updated
    */
   function formatAsStyledHTML(data) {
     const rowsHtml = data.map((r, idx) => {
+      const rowNum = idx + 2; // Sheets row index (starts at 2 after header)
       const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F9F7FC';
       const kdCol = getKdColors(r.kd);
       const intCol = getIntentColors(r.intent);
+      const kgrCol = getKgrColors(r.kgr);
+
+      // Allintitle cell: if number known, show number; else show 1-click Google search hyperlink
+      const googleSearchUrl = `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(r.keyword)}%22`;
+      const allintitleDisplay = (r.allintitle !== null && r.allintitle !== undefined)
+        ? r.allintitle
+        : `<a href="${googleSearchUrl}" target="_blank" style="color: #7b2cbf; text-decoration: underline; font-weight: 600;">🔍 Check allintitle</a>`;
+
+      // KGR formula: =IF(ISNUMBER(E2), ROUND(E2/C2, 4), "")
+      const kgrCellFormula = `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      const kgrDisplay = (r.kgr !== null && r.kgr !== undefined) ? r.kgr : kgrCellFormula;
 
       return `
         <tr style="background-color: ${rowBg};">
           <td style="border: 1px solid #D2D6DC; padding: 8px 12px; font-weight: 600; color: #111827; text-align: left;">${r.keyword}</td>
           <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; background-color: ${intCol.bg}; color: ${intCol.text}; font-weight: bold;">${r.intent}</td>
-          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; font-weight: bold; color: #1F2937;">${r.volume}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; font-weight: bold; color: #1F2937;">${r.volumeNum}</td>
           <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; background-color: ${kdCol.bg}; color: ${kdCol.text}; font-weight: bold;">${r.kd}%</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: center; font-weight: 600; color: #374151;">${allintitleDisplay}</td>
+          <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: center; background-color: ${kgrCol.bg}; color: ${kgrCol.text}; font-weight: bold;">${kgrDisplay}</td>
           <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; color: #374151;">$${r.cpc}</td>
           <td style="border: 1px solid #D2D6DC; padding: 8px 10px; text-align: center; color: #4B5563;">${r.compLvl}</td>
           <td style="border: 1px solid #D2D6DC; padding: 8px 12px; text-align: right; color: #6B7280; font-size: 11px;">${r.updated}</td>
@@ -173,8 +227,10 @@
           <tr style="background-color: #2B0F52; color: #FFFFFF; font-weight: bold;">
             <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: left; background-color: #2B0F52; color: #FFFFFF;">Keyword</th>
             <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">Intent</th>
-            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Volume</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">MSV</th>
             <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">KD %</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">ALLINTITLE</th>
+            <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">KGR</th>
             <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">CPC</th>
             <th style="border: 1px solid #3E1B74; padding: 10px 12px; text-align: center; background-color: #2B0F52; color: #FFFFFF;">Comp. Density</th>
             <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Freshness</th>
@@ -191,19 +247,25 @@
    * Format Plain TSV
    */
   function formatAsTSV(data) {
-    const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated'].join('\t');
-    const rows = data.map(r =>
-      [r.keyword, r.intent, r.volume, r.kd, r.cpc, r.compLvl, r.updated].join('\t')
-    );
+    const header = ['Keyword', 'Intent', 'MSV', 'KD %', 'ALLINTITLE', 'KGR', 'CPC', 'Comp', 'Updated'].join('\t');
+    const rows = data.map((r, idx) => {
+      const rowNum = idx + 2;
+      const allintitleVal = r.allintitle !== null ? r.allintitle : `=HYPERLINK("https://www.google.com/search?q=allintitle:%22"&A${rowNum}&"%22", "Check allintitle")`;
+      const kgrVal = r.kgr !== null ? r.kgr : `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].join('\t');
+    });
     return [header, ...rows].join('\n');
   }
 
   function formatAsCSV(data) {
     const esc = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
-    const header = ['Keyword', 'Intent', 'Volume', 'KD %', 'CPC', 'Comp', 'Updated'].map(esc).join(',');
-    const rows = data.map(r =>
-      [r.keyword, r.intent, r.volume, r.kd, r.cpc, r.compLvl, r.updated].map(esc).join(',')
-    );
+    const header = ['Keyword', 'Intent', 'MSV', 'KD %', 'ALLINTITLE', 'KGR', 'CPC', 'Comp', 'Updated'].map(esc).join(',');
+    const rows = data.map((r, idx) => {
+      const rowNum = idx + 2;
+      const allintitleVal = r.allintitle !== null ? r.allintitle : `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(r.keyword)}%22`;
+      const kgrVal = r.kgr !== null ? r.kgr : `=IF(ISNUMBER(E${rowNum}), ROUND(E${rowNum}/C${rowNum}, 4), "")`;
+      return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].map(esc).join(',');
+    });
     return [header, ...rows].join('\n');
   }
 
@@ -213,7 +275,6 @@
 
   /**
    * Dual Clipboard Writer (text/html + text/plain)
-   * When pasting into Google Sheets or Excel, it automatically uses text/html with colors!
    */
   async function copyRichTable(data) {
     const htmlContent = formatAsStyledHTML(data);
@@ -235,7 +296,6 @@
       console.warn('ClipboardItem error, falling back:', e);
     }
 
-    // Fallback via copy event listener
     return new Promise((resolve) => {
       const listener = (evt) => {
         evt.preventDefault();
@@ -270,9 +330,6 @@
     });
   }
 
-  /**
-   * Show toast within the isolated Shadow DOM
-   */
   function showToast(msg, isError = false) {
     if (!shadowRoot) return;
     const toast = shadowRoot.querySelector('#sqc-toast');
@@ -284,7 +341,66 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       toast.className = 'sqc-toast';
-    }, 2400);
+    }, 2800);
+  }
+
+  /**
+   * Automated KGR Runner: Checks allintitle for detected keywords
+   */
+  async function runAutoCheckKgr() {
+    if (isCheckingKgr) return;
+    isCheckingKgr = true;
+
+    extractKeywords();
+    if (!cachedKeywords.length) {
+      showToast('No keywords to check', true);
+      isCheckingKgr = false;
+      return;
+    }
+
+    showToast(`⚡ Checking KGR for ${cachedKeywords.length} keywords...`);
+
+    let updatedCount = 0;
+    for (let i = 0; i < cachedKeywords.length; i++) {
+      const kw = cachedKeywords[i].keyword;
+      const normKw = kw.toLowerCase();
+
+      // If already cached, skip
+      if (cachedAllintitle[normKw] !== undefined) {
+        continue;
+      }
+
+      try {
+        const searchUrl = `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(kw)}%22`;
+        const res = await fetch(searchUrl, { mode: 'cors' });
+        if (res.ok) {
+          const html = await res.text();
+          let count = 0;
+          const match = html.match(/(?:About\s+)?([0-9,]+)\s+results/i);
+          if (match && match[1]) {
+            count = parseInt(match[1].replace(/,/g, ''), 10) || 0;
+          } else if (html.includes('did not match any documents') || html.includes('No results found')) {
+            count = 0;
+          }
+
+          cachedAllintitle[normKw] = count;
+          if (chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ ['kgr_' + normKw]: count });
+          }
+          updatedCount++;
+        }
+      } catch (e) {
+        console.warn('Auto-check fetch error for:', kw, e);
+      }
+
+      // Safe pause between requests to prevent Google CAPTCHA
+      await new Promise(r => setTimeout(r, 1200));
+    }
+
+    isCheckingKgr = false;
+    extractKeywords();
+    renderWidget();
+    showToast(`✨ KGR check complete! Click "Copy Styled" to paste into Sheets.`);
   }
 
   /**
@@ -330,7 +446,7 @@
         }
 
         .widget-box {
-          width: 260px;
+          width: 268px;
           background: linear-gradient(145deg, #16082e 0%, #0c0219 100%);
           border: 1px solid rgba(199, 125, 255, 0.35);
           border-radius: 14px;
@@ -389,7 +505,7 @@
           border-radius: 6px;
           padding: 4px 8px;
           font-size: 11px;
-          margin-bottom: 9px;
+          margin-bottom: 8px;
         }
 
         .query-lbl {
@@ -405,7 +521,7 @@
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          max-width: 175px;
+          max-width: 180px;
         }
 
         .actions-col {
@@ -422,7 +538,7 @@
           gap: 6px;
           width: 100%;
           padding: 8.5px 10px;
-          font-size: 12px;
+          font-size: 11.5px;
           font-weight: 700;
           color: #ffffff;
           background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
@@ -439,8 +555,27 @@
           box-shadow: 0 5px 16px rgba(157, 78, 221, 0.5);
         }
 
-        .btn-main:active {
-          transform: translateY(0);
+        .btn-kgr {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          width: 100%;
+          padding: 6.5px 8px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #fcedff;
+          background: rgba(56, 18, 102, 0.7);
+          border: 1px solid rgba(199, 125, 255, 0.3);
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-kgr:hover {
+          background: rgba(85, 28, 155, 0.85);
+          border-color: rgba(224, 170, 255, 0.6);
+          color: #ffffff;
         }
 
         .btn-row {
@@ -558,12 +693,17 @@
         </div>
 
         <div class="actions-col">
-          <button type="button" class="btn-main" id="btn-tsv" title="Copies styled colored table ready to paste into Google Sheets or Excel">
+          <button type="button" class="btn-main" id="btn-tsv" title="Copies styled colored table with KGR formulas ready to paste into Google Sheets">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
-            Copy Styled (Colored Sheets)
+            Copy Styled (KGR + Sheets)
+          </button>
+
+          <button type="button" class="btn-kgr" id="btn-auto-kgr" title="Auto-queries Google allintitle count for all 10 keywords">
+            <span>⚡</span>
+            <span>${isCheckingKgr ? 'Checking KGR...' : 'Auto-Check KGR (Google)'}</span>
           </button>
 
           <div class="btn-row">
@@ -580,6 +720,7 @@
 
     // Event handlers inside Shadow DOM
     const btnTsv = shadowRoot.querySelector('#btn-tsv');
+    const btnAutoKgr = shadowRoot.querySelector('#btn-auto-kgr');
     const btnCsv = shadowRoot.querySelector('#btn-csv');
     const btnList = shadowRoot.querySelector('#btn-list');
 
@@ -590,8 +731,12 @@
         return;
       }
       copyRichTable(cachedKeywords).then(() => {
-        showToast(`✨ Copied ${cachedKeywords.length} styled rows for Sheets!`);
+        showToast(`✨ Copied ${cachedKeywords.length} KGR rows for Sheets!`);
       }).catch(() => showToast('Copy failed', true));
+    });
+
+    btnAutoKgr?.addEventListener('click', () => {
+      runAutoCheckKgr();
     });
 
     btnCsv?.addEventListener('click', () => {
@@ -617,37 +762,57 @@
     });
   }
 
-  // Listen for messages from popup
+  // Handle messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'GET_DATA') {
-      const data = extractKeywords();
-      sendResponse({
-        success: true,
-        query: getSearchQuery(),
-        count: data.length,
-        keywords: data
+      loadStoredKgr(() => {
+        const data = extractKeywords();
+        sendResponse({
+          success: true,
+          query: getSearchQuery(),
+          count: data.length,
+          keywords: data
+        });
       });
+      return true;
     }
   });
+
+  // Watch for storage changes (e.g. When Google content script captures a count)
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes) => {
+      let hasKgr = false;
+      for (const key of Object.keys(changes)) {
+        if (key.startsWith('kgr_')) {
+          cachedAllintitle[key.slice(4)] = changes[key].newValue;
+          hasKgr = true;
+        }
+      }
+      if (hasKgr) {
+        extractKeywords();
+        renderWidget();
+      }
+    });
+  }
 
   // Observe SPA DOM updates
   let updateTimer = null;
   const observer = new MutationObserver(() => {
     clearTimeout(updateTimer);
     updateTimer = setTimeout(() => {
-      renderWidget();
+      loadStoredKgr(renderWidget);
     }, 400);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
   window.addEventListener('popstate', () => {
-    setTimeout(renderWidget, 500);
+    setTimeout(() => loadStoredKgr(renderWidget), 500);
   });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderWidget);
+    document.addEventListener('DOMContentLoaded', () => loadStoredKgr(renderWidget));
   } else {
-    setTimeout(renderWidget, 600);
+    setTimeout(() => loadStoredKgr(renderWidget), 600);
   }
 })();
