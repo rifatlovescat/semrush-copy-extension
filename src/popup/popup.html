@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Semrush Quick Copy</title>
-  <link rel="stylesheet" href="popup.css">
+  <link rel="icon" type="image/png" href="../../assets/icons/icon16.png">
+  <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
   <div class="popup-wrapper">
@@ -40,7 +41,7 @@
         </button>
 
         <button type="button" id="btn-auto-kgr" class="btn btn-kgr" title="Auto-queries Google allintitle count for all keywords">
-          <span>?</span>
+          <span>⚡</span>
           <span>Auto-Check KGR (Google)</span>
         </button>
 
@@ -54,7 +55,7 @@
             <span>Download CSV</span>
           </button>
 
-          <button type="button" id="btn-copy-list" class="btn btn-secondary">
+          <button type="button" id="btn-copy-list" class="btn btn-secondary" title="Copy plain keyword list to clipboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
               <line x1="8" y1="6" x2="21" y2="6"></line>
               <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -66,13 +67,12 @@
             <span>Keywords Only</span>
           </button>
 
-          <button type="button" id="btn-export-file" class="btn btn-secondary">
+          <button type="button" id="btn-export-file" class="btn btn-secondary" title="Download CSV file directly">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
-            <span>Export CSV</span>
+            <span>Save .CSV</span>
           </button>
         </div>
       </section>
@@ -103,10 +103,16 @@
 
     <!-- Fixed Footer -->
     <footer class="popup-fixed-footer">
-      <span>Made With ?? By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="r1fat-glow">r1fat</a></span>
+      <span>Made With ❤️ By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="r1fat-glow">r1fat</a></span>
     </footer>
   </div>
 
-  <script src="popup.js"></script>
+  <!-- Modular Scripts Loaded in Order -->
+  <script src="../shared/colors.js"></script>
+  <script src="../shared/storage.js"></script>
+  <script src="../shared/formatters.js"></script>
+  <script src="../content/kgr-runner.js"></script>
+  <script src="scripts/popup-ui.js"></script>
+  <script src="scripts/index.js"></script>
 </body>
 </html>

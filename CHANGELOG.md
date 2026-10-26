@@ -7,13 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-10-26
+
+### Changed & Refactored
+- **Codebase Hygiene & Complete Modular Architecture**:
+  - Restructured entire codebase into dedicated subfolders (`src/shared/`, `src/content/`, `src/google/`, `src/popup/`, `assets/icons/`).
+  - Separated concerns into modular single-responsibility units:
+    - `src/shared/colors.js`: Intent, KD%, and KGR palettes and badge styling.
+    - `src/shared/storage.js`: Cache persistence and automated stale-key pruning.
+    - `src/shared/formatters.js`: Multi-format table builders, formula injectors, and clipboard engines.
+    - `src/content/scraper.js`: DOM extraction, locked row guards, and master header filters.
+    - `src/content/kgr-runner.js`: Throttled background Google SERP query executor.
+    - `src/content/widget-ui.js`: Isolated Shadow DOM in-page widget with animated neon glowing footer.
+    - `src/content/index.js`: Main content script coordinator and mutation observer.
+    - `src/google/grabber.js`: Standalone Google search allintitle result stats grabber.
+    - `src/popup/scripts/popup-ui.js`: Popup interface and keyword card preview renderer.
+    - `src/popup/scripts/index.js`: Popup event controller and tab messaging.
+  - Purged all temporary research clutter, test pages, and sensitive tokens (`cookies.txt`, `HTML/`, `test_preview.html`).
+  - Native Manifest V3 script resolution with zero build steps or bundler overhead.
+
+---
+
 ## [1.2.2] - 2026-10-26
 
 ### Added
 - **Direct CSV File Download**:
   - Clicking the **CSV** button in the on-page floating widget or the extension popup now immediately downloads a `.csv` file directly to your downloads folder (`<query>_kgr_keywords.csv`).
   - Added UTF-8 Byte Order Mark (`\uFEFF`) so downloaded CSV files open cleanly in Excel, Google Sheets, and LibreOffice without character garbling.
-  - Included toast status feedback: `?? Downloaded 10 keywords as CSV!`.
+  - Included toast status feedback: `💾 Downloaded 10 keywords as CSV!`.
 
 ---
 
@@ -36,18 +57,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exact column format: `Keyword | Intent | MSV | KD | ALLINTITLE | KGR | CPC | Comp | Updated`.
   - **Live Google Sheets Formula**: Injected formula `=IF(ISNUMBER(E2), ROUND(E2/C2, 4), "")` for immediate auto-calculation in Google Sheets.
   - **KGR Cell Dynamic Color-Coding**:
-    - `KGR < 0.25`: Soft Green (`#E6F4EA` / `#137333`) - ? Golden / Easy
-    - `0.25 <= KGR <= 1.00`: Soft Yellow (`#FEF7E0` / `#B06000`) - ? Moderate
-    - `KGR > 1.00`: Soft Red (`#FCE8E6` / `#C5221F`) - ? Hard
+    - `KGR < 0.25`: Soft Green (`#E6F4EA` / `#137333`) - ⭐ Golden / Easy
+    - `0.25 <= KGR <= 1.00`: Soft Yellow (`#FEF7E0` / `#B06000`) - ⚡ Moderate
+    - `KGR > 1.00`: Soft Red (`#FCE8E6` / `#C5221F`) - ⛔ Hard
 - **Google Search allintitle Auto-Grabber (`google_content.js`)**:
   - Automatically runs on `google.com/search?q=allintitle:...`.
   - Extracts the exact result count from Google's `#result-stats` (e.g., `About 174 results`).
   - Automatically caches the count to `chrome.storage.local` and displays an on-page confirmation toast badge.
-- **? Auto-Check KGR Button**:
+- **⚡ Auto-Check KGR Button**:
   - Added directly into the on-page floating widget and popup.
   - Sequentially queries Google with safe delay to populate allintitle counts automatically.
 - **1-Click Hyperlinks**:
-  - Pre-fills unchecked allintitle cells with direct Google search formulas: `=HYPERLINK("https://www.google.com/search?q=allintitle:%22"&A2&"%22", "?? Check allintitle")`.
+  - Pre-fills unchecked allintitle cells with direct Google search formulas: `=HYPERLINK("https://www.google.com/search?q=allintitle:%22"&A2&"%22", "🔍 Check allintitle")`.
 
 ---
 

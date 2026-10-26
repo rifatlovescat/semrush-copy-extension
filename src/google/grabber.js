@@ -20,9 +20,11 @@
   }
 
   // Extract clean keyword target
-  // e.g. allintitle:"club penguin" -> club penguin, allintitle:rifat -> rifat
+  // e.g. allintitle:"club penguin" -> club penguin
   const rawTarget = query.slice(11).trim().replace(/^["']|["']$/g, '').trim().toLowerCase();
-  if (!rawTarget || rawTarget.includes('select all') || rawTarget === 'keyword') return;
+  if (!rawTarget || rawTarget.includes('select all') || rawTarget === 'keyword' || rawTarget === 'phrase') {
+    return;
+  }
 
   function extractGoogleResultsCount() {
     // 1. Check standard #result-stats
