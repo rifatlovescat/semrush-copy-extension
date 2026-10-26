@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-10-26
+
+### Added
+- **1-Click Individual Keyword & Entry Copy**:
+  - Added dedicated `📋 Copy` button to every keyword card in the extension popup to copy a single row formatted with styles, colors, and KGR formulas directly for Google Sheets without inserting duplicate header rows.
+  - Added 1-click plain keyword copy by clicking the keyword text itself (`🔤 Copied "<kw>"!`).
+  - Added direct Google search link (`🔍 Check`) on any missing allintitle metric to instantly search `allintitle:"<keyword>"`.
+
+### Fixed
+- **Popup Toast Positioning & Bottom Bar Bug**:
+  - Fixed toast notification class mismatch that previously rendered the toast as an in-flow black bar pushing against the footer.
+  - Redesigned toast as an overlay floating pill with backdrop glassmorphism, neon purple borders, and smooth translation animations (`z-index: 99999`).
+  - Added `position: relative` and bounds protection on `.popup-wrapper`.
+- **Smart KGR Retry on Failed or Missed Queries**:
+  - Overhauled Google search result parser to distinguish true 0-match results (`did not match any documents`) from CAPTCHA challenges or network rate limits.
+  - Re-clicking "Auto-Check KGR" automatically isolates and retries only missing or previously failed keywords, reporting progress and total resolved count (`✨ KGR updated! (X/Y resolved)`).
+- **Element Spacing and Layout Alignment**:
+  - Polished padding, margins, card metrics, badges, and action buttons for alignment across all popup states.
+
+---
+
 ## [1.3.0] - 2026-10-26
 
 ### Changed & Refactored

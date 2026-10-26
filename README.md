@@ -7,7 +7,7 @@
 **Instant 1-click keyword & metric extraction from Semrush Keyword Magic Tool.**  
 Export clean, color-styled tabular data directly into Google Sheets, Excel, or CSV with zero manual copying.
 
-[![Version](https://img.shields.io/badge/Version-1.3.0-e0aaff?style=for-the-badge&logo=semver&logoColor=white)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.3.1-e0aaff?style=for-the-badge&logo=semver&logoColor=white)](CHANGELOG.md)
 [![Manifest V3](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-9d4edd?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-7b2cbf?style=for-the-badge)](LICENSE)
 [![Author](https://img.shields.io/badge/Made_With_❤️_By-r1fat-c77dff?style=for-the-badge)](https://r1fat.pages.dev)

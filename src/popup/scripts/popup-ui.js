@@ -23,12 +23,12 @@
     if (!popupToastEl) return;
 
     popupToastEl.textContent = message;
-    popupToastEl.className = 'toast show' + (isError ? ' error' : '');
+    popupToastEl.className = 'popup-toast show' + (isError ? ' error' : '');
 
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
-      popupToastEl.className = 'toast';
-    }, 2500);
+      popupToastEl.className = 'popup-toast';
+    }, 2400);
   }
 
   function renderKeywords(keywords, query, cachedAllintitle) {
@@ -77,22 +77,37 @@
       if (kw.kgr !== null && kw.kgr !== undefined) {
         const kgrClass = kw.kgr < 0.25 ? 'kw-kgr-golden' : (kw.kgr <= 1.0 ? 'kw-kgr-moderate' : 'kw-kgr-hard');
         const kgrLabel = kw.kgr < 0.25 ? '⭐ Golden' : (kw.kgr <= 1.0 ? '⚡ Moderate' : '⛔ Hard');
-        kgrBadge = `<span class="kw-kgr-pill ${kgrClass}">${kw.kgr} (${kgrLabel})</span>`;
+        kgrBadge = `<span class="kw-kgr-pill ${kgrClass}" title="KGR: ${kw.kgr}">${kw.kgr} (${kgrLabel})</span>`;
       }
 
+      const googleSearchUrl = `https://www.google.com/search?q=allintitle:%22${encodeURIComponent(kw.keyword)}%22`;
+      const allintitleDisplay = (kw.allintitle !== null && kw.allintitle !== undefined)
+        ? `<span class="kw-stat-val">${kw.allintitle.toLocaleString()}</span>`
+        : `<a href="${googleSearchUrl}" target="_blank" class="stat-missing" title="Click to search allintitle on Google">🔍 Check</a>`;
+
       return `
-        <div class="kw-card">
+        <div class="kw-card" data-idx="${i}">
           <div class="kw-card-top">
-            <span class="kw-text" title="${kw.keyword}">${i + 1}. ${escapeHtml(kw.keyword)}</span>
-            <div style="display: flex; gap: 4px; align-items: center;">
+            <div class="kw-title-wrap">
+              <span class="kw-num">${i + 1}.</span>
+              <span class="kw-text" data-copy-kw="${escapeHtml(kw.keyword)}" title="Click to copy keyword text">${escapeHtml(kw.keyword)}</span>
+            </div>
+            <div class="kw-actions">
               ${kgrBadge}
               <span class="kw-intent-badge ${intentClass}">${escapeHtml(kw.intent)}</span>
+              <button type="button" class="btn-copy-card" data-copy-idx="${i}" title="Copy this single row for Google Sheets (KGR formatted)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-copy-icon">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Copy</span>
+              </button>
             </div>
           </div>
           <div class="kw-card-bottom">
             <div class="kw-stat"><span class="kw-stat-label">MSV:</span> <span class="kw-stat-val">${kw.volumeNum.toLocaleString()}</span></div>
             <div class="kw-stat"><span class="kw-stat-label">KD:</span> <span class="kw-stat-val">${kw.kd}%</span></div>
-            <div class="kw-stat"><span class="kw-stat-label">Allintitle:</span> <span class="kw-stat-val">${kw.allintitle !== null ? kw.allintitle.toLocaleString() : '—'}</span></div>
+            <div class="kw-stat"><span class="kw-stat-label">Allintitle:</span> ${allintitleDisplay}</div>
             <div class="kw-stat"><span class="kw-stat-label">CPC:</span> <span class="kw-stat-val">$${kw.cpc}</span></div>
           </div>
         </div>

@@ -107,8 +107,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentKeywords.length) return showToast('No keywords to check!', true);
     if (window.SQC.KgrRunner.isRunnerBusy()) return;
 
+    const missing = currentKeywords.filter((k) => {
+      const norm = (k.keyword || '').toLowerCase();
+      return cachedAllintitle[norm] === undefined || cachedAllintitle[norm] === null;
+    });
+
     btnAutoKgr.innerHTML = '<span>⏳</span><span>Checking KGR...</span>';
-    showToast(`⚡ Checking KGR for ${currentKeywords.length} keywords...`);
+    if (missing.length > 0 && missing.length < currentKeywords.length) {
+      showToast(`⚡ Retrying ${missing.length} missing KGR keywords...`);
+    } else {
+      showToast(`⚡ Checking KGR for ${currentKeywords.length} keywords...`);
+    }
 
     window.SQC.KgrRunner.runAutoCheckKgr(
       currentKeywords,
@@ -116,11 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
       (current, total, kw) => {
         showToast(`🔍 (${current}/${total}): ${kw}`);
       },
-      (updatedCache) => {
+      (updatedCache, newlyFound, totalChecked) => {
         cachedAllintitle = updatedCache;
         btnAutoKgr.innerHTML = '<span>⚡</span><span>Auto-Check KGR (Google)</span>';
         currentKeywords = renderKeywords(currentKeywords, currentQuery, cachedAllintitle);
-        showToast(`✨ KGR check complete!`);
+        const resolved = currentKeywords.filter((k) => {
+          const norm = (k.keyword || '').toLowerCase();
+          return cachedAllintitle[norm] !== undefined && cachedAllintitle[norm] !== null;
+        }).length;
+        showToast(`✨ KGR updated! (${resolved}/${currentKeywords.length} resolved)`);
       }
     );
   });
@@ -149,13 +162,56 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('🔄 Refreshed keywords');
   });
 
-  // External link handler
-  document.querySelectorAll('a[href]').forEach((link) => {
-    link.addEventListener('click', (e) => {
+  // Individual card actions & text clicks (Event Delegation on keyword list)
+  keywordsListEl?.addEventListener('click', (e) => {
+    // 1. Copy single card row for Google Sheets (rich formatted table with KGR formula)
+    const copyBtn = e.target.closest('.btn-copy-card');
+    if (copyBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = parseInt(copyBtn.getAttribute('data-copy-idx'), 10);
+      const targetItem = currentKeywords[idx];
+      if (targetItem) {
+        copyRichTable([targetItem], false)
+          .then(() => showToast(`📋 Copied "${targetItem.keyword}" for Sheets!`))
+          .catch(() => showToast('Copy failed', true));
+      }
+      return;
+    }
+
+    // 2. Click plain keyword text to copy only that keyword
+    const kwTextEl = e.target.closest('[data-copy-kw]');
+    if (kwTextEl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const kw = kwTextEl.getAttribute('data-copy-kw');
+      if (kw) {
+        copyPlainText(kw)
+          .then(() => showToast(`🔤 Copied "${kw}"!`))
+          .catch(() => showToast('Copy failed', true));
+      }
+      return;
+    }
+
+    // 3. Click "🔍 Check" allintitle Google search link
+    const linkEl = e.target.closest('a[href]');
+    if (linkEl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const href = linkEl.getAttribute('href');
+      if (href) chrome.tabs.create({ url: href });
+      return;
+    }
+  });
+
+  // Global external link handler (footer link etc.)
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href]');
+    if (link && !link.closest('#keywords-list')) {
       e.preventDefault();
       const href = link.getAttribute('href');
       if (href) chrome.tabs.create({ url: href });
-    });
+    }
   });
 
   // Initial Fetch

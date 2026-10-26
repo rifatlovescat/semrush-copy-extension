@@ -25,7 +25,17 @@
   function handleAutoKgr() {
     if (window.SQC.KgrRunner.isRunnerBusy()) return;
 
-    window.SQC.WidgetUI.showToast(`⚡ Checking KGR for ${cachedKeywords.length} keywords...`);
+    const missing = cachedKeywords.filter((k) => {
+      const norm = (k.keyword || '').toLowerCase();
+      return cachedAllintitle[norm] === undefined || cachedAllintitle[norm] === null;
+    });
+
+    if (missing.length > 0 && missing.length < cachedKeywords.length) {
+      window.SQC.WidgetUI.showToast(`⚡ Retrying ${missing.length} missing KGR keywords...`);
+    } else {
+      window.SQC.WidgetUI.showToast(`⚡ Checking KGR for ${cachedKeywords.length} keywords...`);
+    }
+
     window.SQC.WidgetUI.renderWidget(cachedKeywords, currentQuery, handleAutoKgr);
 
     window.SQC.KgrRunner.runAutoCheckKgr(
@@ -34,10 +44,14 @@
       (current, total, kw) => {
         window.SQC.WidgetUI.showToast(`🔍 (${current}/${total}): ${kw}`);
       },
-      (updatedCache) => {
+      (updatedCache, newlyFound, totalChecked) => {
         cachedAllintitle = updatedCache;
         refreshDataAndUI();
-        window.SQC.WidgetUI.showToast(`✨ KGR check complete!`);
+        const resolved = cachedKeywords.filter((k) => {
+          const norm = (k.keyword || '').toLowerCase();
+          return cachedAllintitle[norm] !== undefined && cachedAllintitle[norm] !== null;
+        }).length;
+        window.SQC.WidgetUI.showToast(`✨ KGR updated! (${resolved}/${cachedKeywords.length} resolved)`);
       }
     );
   }

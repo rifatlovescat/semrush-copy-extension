@@ -12,7 +12,7 @@
    * Format as Rich HTML Table for Google Sheets / Excel
    * Columns: Keyword | Intent | MSV | KD | ALLINTITLE | KGR | CPC | Comp | Freshness
    */
-  function formatAsStyledHTML(data) {
+  function formatAsStyledHTML(data, includeHeader = true) {
     const { getKdColors, getIntentColors, getKgrColors } = window.SQC.Colors;
 
     const rowsHtml = (data || []).map((r, idx) => {
@@ -48,8 +48,7 @@
       `;
     }).join('');
 
-    return `
-      <table style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; color: #333333; border: 1px solid #D2D6DC;">
+    const theadHtml = includeHeader ? `
         <thead>
           <tr style="background-color: #2B0F52; color: #FFFFFF; font-weight: bold;">
             <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: left; background-color: #2B0F52; color: #FFFFFF;">Keyword</th>
@@ -63,6 +62,11 @@
             <th style="border: 1px solid #3E1B74; padding: 10px 14px; text-align: right; background-color: #2B0F52; color: #FFFFFF;">Freshness</th>
           </tr>
         </thead>
+    ` : '';
+
+    return `
+      <table style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; color: #333333; border: 1px solid #D2D6DC;">
+        ${theadHtml}
         <tbody>
           ${rowsHtml}
         </tbody>
@@ -73,7 +77,7 @@
   /**
    * Format Plain TSV
    */
-  function formatAsTSV(data) {
+  function formatAsTSV(data, includeHeader = true) {
     const header = ['Keyword', 'Intent', 'MSV', 'KD %', 'ALLINTITLE', 'KGR', 'CPC', 'Comp', 'Updated'].join('\t');
     const rows = (data || []).map((r, idx) => {
       const rowNum = idx + 2;
@@ -81,7 +85,7 @@
       const kgrVal = `=IF(AND(E${rowNum}<>"", C${rowNum}>0), ROUND(IF(ISNUMBER(E${rowNum}), E${rowNum}, VALUE(SUBSTITUTE(E${rowNum}, ",", ""))) / C${rowNum}, 4), "")`;
       return [r.keyword, r.intent, r.volumeNum, r.kd, allintitleVal, kgrVal, r.cpc, r.compLvl, r.updated].join('\t');
     });
-    return [header, ...rows].join('\n');
+    return includeHeader ? [header, ...rows].join('\n') : rows.join('\n');
   }
 
   /**
@@ -134,9 +138,9 @@
   /**
    * Dual Clipboard Writer (text/html + text/plain)
    */
-  async function copyRichTable(data) {
-    const htmlContent = formatAsStyledHTML(data);
-    const plainText = formatAsTSV(data);
+  async function copyRichTable(data, includeHeader = true) {
+    const htmlContent = formatAsStyledHTML(data, includeHeader);
+    const plainText = formatAsTSV(data, includeHeader);
 
     try {
       if (navigator.clipboard && window.ClipboardItem) {
