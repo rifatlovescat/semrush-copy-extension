@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" width="100%" height="260">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#190634"/>
+      <stop offset="50%" stop-color="#0e0320"/>
+      <stop offset="100%" stop-color="#080114"/>
+    </linearGradient>
+
+    <!-- Radial Glows -->
+    <radialGradient id="glowPurple" cx="30%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#9d4edd" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0e0320" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowPink" cx="75%" cy="70%" r="45%">
+      <stop offset="0%" stop-color="#e0aaff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#080114" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Accent Border Gradient -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7b2cbf" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#c77dff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#7b2cbf" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <!-- Title Gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#fcedff"/>
+      <stop offset="100%" stop-color="#e0aaff"/>
+    </linearGradient>
+
+    <!-- Icon Body Gradient -->
+    <linearGradient id="iconBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9d4edd"/>
+      <stop offset="100%" stop-color="#4a0e78"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#c77dff" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="260" rx="16" fill="url(#bgGrad)"/>
+  <rect width="800" height="260" rx="16" fill="url(#glowPurple)"/>
+  <rect width="800" height="260" rx="16" fill="url(#glowPink)"/>
+
+  <!-- Border -->
+  <rect x="1" y="1" width="798" height="258" rx="15" fill="none" stroke="url(#borderGrad)" stroke-width="1.5"/>
+
+  <!-- Left Icon Emblem -->
+  <g transform="translate(60, 50)" filter="url(#shadow)">
+    <!-- Squircle Container -->
+    <rect width="84" height="84" rx="20" fill="url(#iconBodyGrad)" stroke="#e0aaff" stroke-width="2"/>
+    
+    <!-- Clipboard Outline -->
+    <rect x="22" y="22" width="40" height="48" rx="6" fill="#1b0838" stroke="#fcedff" stroke-width="2"/>
+    
+    <!-- Clip Top -->
+    <rect x="34" y="17" width="16" height="8" rx="3" fill="#fcedff"/>
+    
+    <!-- Data Lines -->
+    <rect x="30" y="34" width="24" height="3" rx="1.5" fill="#e0aaff"/>
+    <rect x="30" y="43" width="18" height="3" rx="1.5" fill="#c77dff"/>
+    <rect x="30" y="52" width="12" height="3" rx="1.5" fill="#fcedff"/>
+
+    <!-- Sparkle Top-Right -->
+    <path d="M 72 16 Q 72 24 80 24 Q 72 24 72 32 Q 72 24 64 24 Q 72 24 72 16 Z" fill="#ffffff"/>
+  </g>
+
+  <!-- Header Texts -->
+  <g transform="translate(170, 75)">
+    <!-- Small Category Pill -->
+    <rect x="0" y="0" width="135" height="22" rx="11" fill="rgba(199, 125, 255, 0.16)" stroke="#c77dff" stroke-width="1"/>
+    <text x="67" y="15" fill="#e0aaff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle">CHROME EXTENSION</text>
+
+    <!-- Main Title -->
+    <text x="0" y="58" fill="url(#titleGrad)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="800" letter-spacing="0.5">Semrush Quick Copy</text>
+
+    <!-- Subtitle -->
+    <text x="0" y="86" fill="#d0b3ea" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14.5" font-weight="500">
+      1-Click Keyword &amp; Metric Extraction for Google Sheets, Excel, &amp; CSV
+    </text>
+  </g>
+
+  <!-- Bottom Pills / Highlights -->
+  <g transform="translate(60, 195)">
+    <!-- Pill 1 -->
+    <rect x="0" y="0" width="110" height="28" rx="8" fill="rgba(35, 12, 68, 0.7)" stroke="rgba(199, 125, 255, 0.3)" stroke-width="1"/>
+    <text x="55" y="18" fill="#fcedff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" text-anchor="middle">⚡ Manifest V3</text>
+
+    <!-- Pill 2 -->
+    <rect x="122" y="0" width="135" height="28" rx="8" fill="rgba(35, 12, 68, 0.7)" stroke="rgba(199, 125, 255, 0.3)" stroke-width="1"/>
+    <text x="189" y="18" fill="#fcedff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" text-anchor="middle">📊 Sheets &amp; Excel TSV</text>
+
+    <!-- Pill 3 -->
+    <rect x="269" y="0" width="130" height="28" rx="8" fill="rgba(35, 12, 68, 0.7)" stroke="rgba(199, 125, 255, 0.3)" stroke-width="1"/>
+    <text x="334" y="18" fill="#fcedff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" text-anchor="middle">🎯 Zero Rate Limits</text>
+
+    <!-- Pill 4 - Author / Glow -->
+    <rect x="411" y="0" width="269" height="28" rx="8" fill="rgba(50, 15, 95, 0.8)" stroke="#c77dff" stroke-width="1.2"/>
+    <text x="545" y="18" fill="#fcedff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" text-anchor="middle">
+      Made With ❤️ By <tspan fill="#e0aaff" font-weight="700">r1fat</tspan> (r1fat.pages.dev)
+    </text>
+  </g>
+</svg>

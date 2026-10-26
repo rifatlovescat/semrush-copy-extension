@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semrush Quick Copy</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-wrapper">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="header-left">
+        <div class="logo-circle">
+          <span>S</span>
+        </div>
+        <div class="header-titles">
+          <h1>Semrush Copy</h1>
+          <div class="target-chip">
+            <span class="chip-label">Query:</span>
+            <span id="query-name" class="chip-val">Detecting...</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <span id="keyword-count-badge" class="count-badge">0 Found</span>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="popup-main">
+      <!-- Quick Action Buttons -->
+      <section class="action-section">
+        <button type="button" id="btn-copy-tsv" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>Copy for Google Sheets / Excel</span>
+        </button>
+
+        <div class="btn-grid">
+          <button type="button" id="btn-copy-csv" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <span>Copy CSV</span>
+          </button>
+
+          <button type="button" id="btn-copy-list" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span>Keywords Only</span>
+          </button>
+
+          <button type="button" id="btn-export-file" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Export CSV</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Preview Header -->
+      <div class="preview-header">
+        <span class="preview-title">Extracted Keywords</span>
+        <button type="button" id="btn-refresh" class="btn-refresh" title="Refresh detection">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="refresh-icon">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Keyword List Preview -->
+      <div id="keywords-list" class="keywords-list">
+        <div class="empty-state">
+          <div class="pulse-loader"></div>
+          <p>Scanning active Semrush tab for keywords...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Toast Notification in Popup -->
+    <div id="popup-toast" class="popup-toast">Copied to clipboard!</div>
+
+    <!-- Fixed Footer -->
+    <footer class="popup-fixed-footer">
+      <span>Made With ❤️ By <a href="https://r1fat.pages.dev" target="_blank" rel="noopener noreferrer" class="r1fat-glow">r1fat</a></span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+/* ==========================================================================
+   Semrush Quick Copy - In-Page Content Styles
+   Author: r1fat (https://r1fat.pages.dev)
+   Theme: Deep Purple & Light Pink/Lavender
+   ========================================================================== */
+
+#sqc-floating-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+#sqc-floating-widget * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.sqc-widget-card {
+  width: 280px;
+  background: linear-gradient(145deg, #180a32 0%, #0d041c 100%);
+  border: 1px solid rgba(199, 125, 255, 0.28);
+  border-radius: 16px;
+  padding: 16px 16px 12px 16px;
+  box-shadow: 0 12px 36px rgba(10, 2, 22, 0.75), 0 0 20px rgba(157, 78, 221, 0.22);
+  backdrop-filter: blur(12px);
+  color: #fcedff;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+.sqc-widget-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 44px rgba(10, 2, 22, 0.85), 0 0 28px rgba(199, 125, 255, 0.35);
+  border-color: rgba(224, 170, 255, 0.45);
+}
+
+.sqc-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sqc-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sqc-dot {
+  width: 9px;
+  height: 9px;
+  background: #c77dff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #c77dff, 0 0 16px #e0aaff;
+  animation: sqc-pulse 2s infinite ease-in-out;
+}
+
+.sqc-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fcedff;
+}
+
+.sqc-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(199, 125, 255, 0.18);
+  color: #f5e1fd;
+  border: 1px solid rgba(224, 170, 255, 0.3);
+  border-radius: 12px;
+}
+
+.sqc-query-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(30, 12, 60, 0.6);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(199, 125, 255, 0.15);
+}
+
+.sqc-query-label {
+  color: #c77dff;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.sqc-query-val {
+  color: #ffffff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.sqc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sqc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  padding: 9px 12px;
+  outline: none;
+  font-family: inherit;
+}
+
+.sqc-btn-primary {
+  background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
+  color: #ffffff;
+  border: 1px solid rgba(245, 225, 253, 0.3);
+  box-shadow: 0 4px 14px rgba(123, 44, 191, 0.4);
+}
+
+.sqc-btn-primary:hover {
+  background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+  box-shadow: 0 6px 20px rgba(157, 78, 221, 0.55);
+  transform: translateY(-1px);
+}
+
+.sqc-btn-primary:active {
+  transform: translateY(0);
+}
+
+.sqc-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sqc-btn-secondary {
+  background: rgba(40, 16, 75, 0.7);
+  color: #fcedff;
+  border: 1px solid rgba(199, 125, 255, 0.22);
+}
+
+.sqc-btn-secondary:hover {
+  background: rgba(70, 25, 120, 0.85);
+  border-color: rgba(224, 170, 255, 0.45);
+  color: #ffffff;
+}
+
+.sqc-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Fixed Footer & r1fat Glowing Style
+   ========================================================================== */
+.sqc-fixed-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #bfa7d9;
+  padding-top: 8px;
+  border-top: 1px solid rgba(199, 125, 255, 0.15);
+  letter-spacing: 0.2px;
+}
+
+.sqc-glow-link {
+  color: #e0aaff !important;
+  font-weight: 700;
+  text-decoration: none !important;
+  position: relative;
+  display: inline-block;
+  text-shadow: 0 0 6px rgba(224, 170, 255, 0.7), 0 0 14px rgba(199, 125, 255, 0.5);
+  animation: r1fat-glow-pulse 2.2s ease-in-out infinite alternate;
+  transition: all 0.2s ease;
+}
+
+.sqc-glow-link:hover {
+  color: #ffffff !important;
+  text-shadow: 0 0 10px #fcedff, 0 0 20px #e0aaff, 0 0 30px #c77dff;
+  transform: scale(1.06);
+}
+
+@keyframes r1fat-glow-pulse {
+  0% {
+    text-shadow: 0 0 4px rgba(224, 170, 255, 0.6), 0 0 10px rgba(199, 125, 255, 0.4);
+    color: #e0aaff;
+  }
+  50% {
+    text-shadow: 0 0 8px rgba(252, 237, 255, 0.9), 0 0 18px rgba(224, 170, 255, 0.8), 0 0 26px rgba(157, 78, 221, 0.6);
+    color: #fcedff;
+  }
+  100% {
+    text-shadow: 0 0 4px rgba(224, 170, 255, 0.6), 0 0 10px rgba(199, 125, 255, 0.4);
+    color: #e0aaff;
+  }
+}
+
+@keyframes sqc-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+/* ==========================================================================
+   Toast Notification
+   ========================================================================== */
+.sqc-toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: linear-gradient(135deg, #240046 0%, #10002b 100%);
+  color: #fcedff;
+  border: 1px solid rgba(224, 170, 255, 0.5);
+  padding: 11px 22px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(199, 125, 255, 0.4);
+  z-index: 10000000;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.sqc-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.sqc-toast.error {
+  border-color: rgba(255, 107, 107, 0.6);
+  color: #ffe3e3;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 107, 107, 0.35);
+}

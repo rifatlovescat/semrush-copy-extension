@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semrush Quick Copy - UI Preview & Test</title>
+  <style>
+    body {
+      background-color: #07010f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+      color: #fcedff;
+    }
+    .preview-container {
+      width: 380px;
+      height: 540px;
+      border: 1px solid rgba(199, 125, 255, 0.4);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(157, 78, 221, 0.35);
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .instructions {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #c8b0df;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <iframe src="popup.html"></iframe>
+  </div>
+  <div class="instructions">
+    <p>Extension UI Preview &bull; Load this folder unpacked in <code>chrome://extensions</code> to test directly on Semrush.</p>
+  </div>
+</body>
+</html>
