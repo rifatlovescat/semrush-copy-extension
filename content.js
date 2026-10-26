@@ -24,7 +24,12 @@
         const result = {};
         for (const [key, val] of Object.entries(items || {})) {
           if (key.startsWith('kgr_')) {
-            result[key.slice(4)] = val;
+            const kw = key.slice(4).toLowerCase();
+            if (kw.includes('select all')) {
+              chrome.storage.local.remove(key);
+            } else {
+              result[kw] = val;
+            }
           }
         }
         cachedAllintitle = result;
@@ -57,16 +62,29 @@
     const items = [];
 
     rows.forEach((row) => {
-      // 1. Identify keyword anchor / text
+      // 0. Skip table headers, column headers, and control rows
+      if (
+        row.matches('[data-testid="table-header-row"], .sm-table-layout__header, .sm-table-row-layout__head, thead tr') ||
+        row.querySelector('[role="columnheader"], [data-testid="table-cell-head"], th')
+      ) {
+        return;
+      }
+
+      // 1. Identify keyword anchor / text (genuine keyword rows have link or cell-keyword)
       const kwAnchor = row.querySelector('[data-testid="table-cell-keyword"] a') ||
+                       row.querySelector('[data-testid="table-cell-keyword"]') ||
                        row.querySelector('.sm-cell-phrase__link') ||
-                       row.querySelector('a[href*="/keywordoverview/"]') ||
-                       row.querySelector('[data-ui-name="Checkbox.Text"]');
+                       row.querySelector('a[href*="/keywordoverview/"]');
       
-      if (!kwAnchor) return; // Skip skeleton/paywalled rows
+      if (!kwAnchor) return; // Skip skeleton/paywalled or header rows
 
       const keyword = kwAnchor.textContent.trim();
-      if (!keyword || keyword.toLowerCase() === 'keyword') return;
+      if (!keyword) return;
+
+      const lowerKw = keyword.toLowerCase();
+      if (lowerKw === 'keyword' || lowerKw === 'phrase' || lowerKw.includes('select all')) {
+        return;
+      }
 
       // 2. Check if the checkbox is explicitly disabled
       const checkbox = row.querySelector('input[type="checkbox"]');

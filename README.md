@@ -7,10 +7,10 @@
 **Instant 1-click keyword & metric extraction from Semrush Keyword Magic Tool.**  
 Export clean, color-styled tabular data directly into Google Sheets, Excel, or CSV with zero manual copying.
 
-[![Version](https://img.shields.io/badge/Version-1.2.0-e0aaff?style=for-the-badge&logo=semver&logoColor=white)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.1-e0aaff?style=for-the-badge&logo=semver&logoColor=white)](CHANGELOG.md)
 [![Manifest V3](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-9d4edd?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-7b2cbf?style=for-the-badge)](LICENSE)
-[![Author](https://img.shields.io/badge/Made_With_❤️_By-r1fat-c77dff?style=for-the-badge)](https://r1fat.pages.dev)
+[![Author](https://img.shields.io/badge/Made_With_??_By-r1fat-c77dff?style=for-the-badge)](https://r1fat.pages.dev)
 
 </div>
 
@@ -49,15 +49,15 @@ The copied table follows the optimal SEO research structure:
 
 ### Key Features
 
-- **⚡ Google Search allintitle Auto-Grabber**: Automatically catches result counts from Google (`#result-stats`) when searching `allintitle:...` and saves them to local storage.
-- **🎯 1-Click "Auto-Check KGR"**: Single button in popup and on-page widget that sequentially fetches `allintitle` result counts for all 10 keywords.
-- **🎨 Direct Colored Google Sheets / Excel Paste**:
+- **? Google Search allintitle Auto-Grabber**: Automatically catches result counts from Google (`#result-stats`) when searching `allintitle:...` and saves them to local storage.
+- **?? 1-Click "Auto-Check KGR"**: Single button in popup and on-page widget that sequentially fetches `allintitle` result counts for all 10 keywords.
+- **?? Direct Colored Google Sheets / Excel Paste**:
   - **Deep Purple Header**: `#2B0F52` background with crisp white typography.
   - **KD% Heatmap Coloring**: Automatically colors KD cells (Green = Very Easy, Yellow = Possible, Orange = Difficult, Red = Hard).
-  - **KGR Heatmap**: Green (<0.25 = ⭐ Golden), Yellow (0.25 - 1.00 = ⚡ Moderate), Red (>1.00 = ⛔ Hard).
+  - **KGR Heatmap**: Green (<0.25 = ? Golden), Yellow (0.25 - 1.00 = ? Moderate), Red (>1.00 = ? Hard).
   - **Intent Badges**: Soft color-coded tags for Informational, Commercial, Transactional, and Navigational intents.
-- **📄 CSV & Plain Formats**: Standard CSV and newline keyword lists.
-- **⚡ Dual Access**:
+- **?? CSV & Plain Formats**: Standard CSV and newline keyword lists.
+- **? Dual Access**:
   - **Shadow DOM Floating Widget**: Encapsulated bottom-right pill with zero CSS leakage from Semrush.
   - **Extension Toolbar Popup**: Full card preview with live metrics and count badges.
 
@@ -115,7 +115,7 @@ Detailed release history and changelogs are maintained in [CHANGELOG.md](CHANGEL
 
 ### Fixed Footer & Attribution
 
-**Made With ❤️ By <a href="https://r1fat.pages.dev" target="_blank">r1fat</a>**
+**Made With ?? By <a href="https://r1fat.pages.dev" target="_blank">r1fat</a>**
 
 *(Visit [r1fat.pages.dev](https://r1fat.pages.dev))*
 
