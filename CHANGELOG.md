@@ -1,0 +1,42 @@
+# Changelog
+
+All notable changes to **Semrush Quick Copy** will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.1.0] - 2026-10-26
+
+### Added
+- **Rich Styled HTML Clipboard Copying**: Direct 1-click paste into Google Sheets & Excel with full styling (zero Apps Script required).
+- **Semrush KD% Heatmap Colors**: Automated color-coding for Keyword Difficulty:
+  - `0 - 29`: Soft Green (`#E6F4EA` / `#137333`) - Very Easy
+  - `30 - 49`: Soft Yellow (`#FEF7E0` / `#B06000`) - Possible
+  - `50 - 69`: Soft Orange (`#FEEDDC` / `#C05621`) - Difficult
+  - `70 - 84`: Soft Red (`#FCE8E6` / `#C5221F`) - Hard
+  - `85 - 100`: Dark Red (`#F8D7DA` / `#721C24`) - Very Hard
+- **Color-Coded Intent Badges**: Informational (Blue), Commercial (Amber), Transactional (Red), and Navigational (Purple).
+- **Deep Purple Styled Header Row**: `#2B0F52` background with bold white text and cell borders (`#D2D6DC`).
+- **Shadow DOM Encapsulation**: Isolated floating widget inside `attachShadow({ mode: 'open' })` to prevent any CSS style inheritance or padding leakage from Semrush.
+- **Repository Tagging & Project Metadata**: Added `package.json` with metadata, tags, and version tracking.
+
+### Fixed
+- **SVG Disabled Detection Bug**: Fixed an issue where Semrush's internal `<svg disabled="" ...>` icons triggered false-positive locked row checks, causing `0 Found` results.
+- **Widget Bottom Padding & Spacing**: Eliminated awkward bottom gap and oversized shadow spilling.
+
+---
+
+## [1.0.0] - 2026-10-26
+
+### Added
+- Initial release of **Semrush Quick Copy** (Manifest V3).
+- Real-time DOM scraper for Semrush Keyword Magic Tool (extracts top 10 visible free keyword results).
+- Popup interface with live keyword preview cards and metric badges (Volume, KD%, CPC, Freshness).
+- Multiple export modes: TSV (Sheets/Excel), CSV, and Keywords Only.
+- Direct `.csv` file download.
+- Floating in-page quick-action widget.
+- Custom deep purple and lavender theme styling.
+- Fixed glowing footer linking to [r1fat.pages.dev](https://r1fat.pages.dev).
+- High-resolution icon set (16x16, 48x48, 128x128).

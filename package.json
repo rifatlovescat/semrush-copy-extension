@@ -1,0 +1,28 @@
+{
+  "name": "semrush-quick-copy",
+  "version": "1.1.0",
+  "description": "Chrome Extension for instant 1-click keyword and metric extraction from Semrush Keyword Magic Tool into Google Sheets, Excel, and CSV.",
+  "main": "content.js",
+  "author": "r1fat (https://r1fat.pages.dev)",
+  "license": "MIT",
+  "homepage": "https://github.com/rifatlovescat/semrush-copy-extension",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rifatlovescat/semrush-copy-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rifatlovescat/semrush-copy-extension/issues"
+  },
+  "keywords": [
+    "semrush",
+    "seo",
+    "keyword-research",
+    "google-sheets",
+    "excel",
+    "chrome-extension",
+    "manifest-v3",
+    "data-extraction",
+    "growth-hacking",
+    "productivity"
+  ]
+}
